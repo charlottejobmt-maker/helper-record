@@ -1,1493 +1,980 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>考勤管理系統</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Helper 出勤紀錄系統</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
+  * { font-family: 'Noto Sans TC', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
   :root {
-    --bg:       #080b12;
-    --surface:  #0e1220;
-    --surface2: #141826;
-    --surface3: #1c2236;
-    --border:   #242a40;
-    --border2:  #2e3652;
-    --accent:   #3d8bff;
-    --accent2:  #6c4ff6;
-    --accentG:  linear-gradient(135deg, #3d8bff 0%, #6c4ff6 100%);
-    --green:    #2dd4a8;
-    --red:      #f06060;
-    --yellow:   #f5c842;
-    --orange:   #f59542;
-    --text:     #dde3f5;
-    --text2:    #7d86a4;
-    --text3:    #454d68;
-    --radius:   14px;
-    --radius-sm:9px;
-    --shadow:   0 4px 24px rgba(0,0,0,0.5);
+    --accent: #4F46E5;
+    --accent-light: #EEF2FF;
+    --accent-dark: #3730A3;
+    --success: #059669;
+    --warning: #D97706;
+    --danger: #DC2626;
   }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Noto Sans TC', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    line-height: 1.5;
-  }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-
-  /* HEADER */
-  .header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    position: sticky;
-    top: 0;
-    z-index: 200;
-    backdrop-filter: blur(12px);
-  }
-  .header::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
-    opacity: 0.4;
-  }
-  .logo {
-    width: 38px; height: 38px;
-    background: var(--accentG);
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    box-shadow: 0 0 18px rgba(61,139,255,0.35);
-  }
-  .logo svg { width: 20px; height: 20px; }
-  .header-title { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.04em; }
-  .header-date {
-    font-size: 0.76rem;
-    color: var(--text2);
-    font-family: 'IBM Plex Mono', monospace;
-    margin-left: auto;
-  }
-
-  /* NAV TABS */
-  .nav {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    display: flex;
-    gap: 2px;
-  }
-  .tab-btn {
-    padding: 14px 20px 13px;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--text2);
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s, background 0.2s;
-    letter-spacing: 0.03em;
-    position: relative;
-    white-space: nowrap;
-  }
-  .tab-btn:hover { color: var(--text); background: var(--surface2); }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    background: rgba(61,139,255,0.2);
-    color: var(--accent);
-    border-radius: 9px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-left: 6px;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  /* LAYOUT */
-  .main { padding: 28px 32px; max-width: 1160px; margin: 0 auto; }
-  .tab-panel { display: none; animation: fadeUp 0.25s ease; }
-  .tab-panel.active { display: block; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* CARD */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-  .card-title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--text);
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .card-title-bar {
-    width: 3px; height: 17px;
-    background: var(--accentG);
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-  .card-title-sub {
-    margin-left: auto;
-    font-size: 0.76rem;
-    color: var(--text3);
-    font-weight: 400;
-  }
-
-  /* FORM */
-  .form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 16px;
-  }
-  .form-grid.g2 { grid-template-columns: 1fr 1fr; }
-  .form-grid.g3 { grid-template-columns: 1fr 1fr 1fr; }
-  .field { display: flex; flex-direction: column; gap: 7px; }
-  .field.span2 { grid-column: span 2; }
-  .field.full  { grid-column: 1 / -1; }
-  .field label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--text2);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  input, select, textarea {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 0.88rem;
-    padding: 10px 13px;
-    outline: none;
-    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(61,139,255,0.12);
-    background: var(--surface3);
-  }
-  select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237d86a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 32px;
-  }
-  select option { background: #1c2236; }
-  textarea { resize: vertical; min-height: 68px; line-height: 1.6; }
-  input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
-
-  /* RESULT BOX */
-  .rbox {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px 13px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.86rem;
-    color: var(--green);
-    min-height: 40px;
-    letter-spacing: 0.02em;
-    transition: color 0.2s;
-  }
-  .rbox.warn { color: var(--yellow); }
-  .rbox.err  { color: var(--red); }
-  .rbox.pay  { color: var(--orange); font-weight: 600; font-size: 0.95rem; }
-
-  /* BUTTONS */
-  .btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-  }
-  .btn-primary {
-    background: var(--accentG);
-    color: #fff;
-    box-shadow: 0 2px 14px rgba(61,139,255,0.3);
-  }
-  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(61,139,255,0.4); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-danger {
-    background: rgba(240,96,96,0.12);
-    color: var(--red);
-    border: 1px solid rgba(240,96,96,0.25);
-  }
-  .btn-danger:hover { background: rgba(240,96,96,0.22); }
-  .btn-ghost {
-    background: var(--surface2);
-    color: var(--text2);
-    border: 1px solid var(--border);
-  }
-  .btn-ghost:hover { color: var(--text); border-color: var(--border2); }
-  .btn-green {
-    background: rgba(45,212,168,0.1);
-    color: var(--green);
-    border: 1px solid rgba(45,212,168,0.25);
-  }
-  .btn-green:hover { background: rgba(45,212,168,0.2); }
-  .btn-yellow {
-    background: rgba(245,200,66,0.1);
-    color: var(--yellow);
-    border: 1px solid rgba(245,200,66,0.25);
-  }
-  .btn-yellow:hover { background: rgba(245,200,66,0.2); }
-  .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 7px; }
-  .btn-xs { padding: 4px 8px; font-size: 0.71rem; border-radius: 6px; }
-
-  /* MEAL FIELD */
-  .meal-field-inner { display: flex; gap: 8px; }
-  .meal-field-inner select { flex: 1; }
-  .meal-add-row { display: flex; gap: 8px; margin-top: 8px; }
-  .meal-add-row input { flex: 1; }
-
-  /* SUMMARY BAR */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
-  }
-  .scard {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 16px 18px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .scard:hover { border-color: var(--border2); }
-  .scard::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--accentG);
-  }
-  .scard.green::before { background: linear-gradient(90deg, var(--green), #1de7c2); }
-  .scard.yellow::before { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
-  .scard.purple::before { background: linear-gradient(90deg, var(--accent2), #a966f5); }
-  .scard.orange::before { background: linear-gradient(90deg, var(--orange), #f5c842); }
-  .sval {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--accent);
-    line-height: 1.2;
-    margin-bottom: 5px;
-  }
-  .scard.green  .sval { color: var(--green); }
-  .scard.yellow .sval { color: var(--yellow); }
-  .scard.purple .sval { color: var(--accent2); }
-  .scard.orange .sval { color: var(--orange); }
-  .slbl { font-size: 0.72rem; color: var(--text3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-
-  /* TABLE */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
-  thead tr { background: var(--surface2); }
-  th {
-    padding: 11px 14px;
-    text-align: left;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--text3);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    border-bottom: 2px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: var(--surface2);
-    z-index: 1;
-  }
-  td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-    vertical-align: middle;
-  }
-  tbody tr { transition: background 0.15s; }
-  tbody tr:hover { background: var(--surface2); }
-  tbody tr:last-child td { border-bottom: none; }
-  .mono { font-family: 'IBM Plex Mono', monospace; font-size: 0.81rem; }
-
-  /* BADGE */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 9px;
-    border-radius: 20px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-  }
-  .badge-blue   { background: rgba(61,139,255,0.12);  color: #5da8ff; }
-  .badge-green  { background: rgba(45,212,168,0.12);  color: var(--green); }
-  .badge-yellow { background: rgba(245,200,66,0.12);  color: var(--yellow); }
-  .badge-orange { background: rgba(245,149,66,0.12);  color: var(--orange); }
-  .badge-purple { background: rgba(108,79,246,0.15);  color: #a98af7; }
-
-  /* EMPLOYEE CARDS */
-  .emp-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-  }
-  .emp-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-    cursor: default;
-  }
-  .emp-card:hover {
-    border-color: var(--border2);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-  }
-  .emp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .emp-avatar {
-    width: 40px; height: 40px;
-    background: var(--accentG);
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-size: 0.88rem;
-    font-weight: 800;
-    color: #fff;
-    flex-shrink: 0;
-    box-shadow: 0 0 12px rgba(61,139,255,0.3);
-  }
-  .emp-avatar-name { font-size: 1rem; font-weight: 700; }
-  .emp-avatar-id { font-size: 0.7rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
-  .emp-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-  .emp-row { display: flex; gap: 8px; font-size: 0.79rem; align-items: flex-start; }
-  .emp-row-lbl {
-    color: var(--text3);
-    min-width: 50px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding-top: 2px;
-    flex-shrink: 0;
-  }
-  .emp-row-val { color: var(--text2); word-break: break-all; line-height: 1.4; }
-  .emp-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .emp-stats { display: flex; gap: 12px; }
-  .emp-stat { font-size: 0.74rem; }
-  .emp-stat-val { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent); }
-  .emp-stat-lbl { color: var(--text3); font-size: 0.68rem; }
-
-  /* FILTER ROW */
-  .filter-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 18px;
-    flex-wrap: wrap;
-  }
-  .filter-row select { max-width: 190px; flex-shrink: 0; }
-  .filter-row-right { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-  /* SECTION DIVIDER */
-  .section-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: var(--text3);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 18px 0 10px;
-    border-top: 1px solid var(--border);
-    margin-top: 4px;
-  }
-
-  /* MODAL OVERLAY */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.72);
-    z-index: 999;
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    padding: 28px;
-    width: 100%;
-    max-width: 560px;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
-    animation: modalIn 0.22s ease;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.96) translateY(8px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  .modal-title {
-    font-size: 1rem;
-    font-weight: 800;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .modal-actions { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
-
-  /* TOAST */
-  .toast {
-    position: fixed;
-    bottom: 24px; right: 24px;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-left: 3px solid var(--green);
-    border-radius: var(--radius-sm);
-    padding: 13px 18px;
-    font-size: 0.85rem;
-    line-height: 1.4;
-    box-shadow: var(--shadow);
-    z-index: 9999;
-    opacity: 0;
-    transform: translateX(20px);
-    transition: all 0.28s cubic-bezier(.34,1.56,.64,1);
-    pointer-events: none;
-    max-width: 300px;
-  }
-  .toast.show { opacity: 1; transform: translateX(0); }
-  .toast.error { border-left-color: var(--red); }
-  .toast.warn  { border-left-color: var(--yellow); }
-
-  /* EMPTY STATE */
-  .empty {
-    text-align: center;
-    padding: 52px 20px;
-    color: var(--text3);
-    font-size: 0.85rem;
-    line-height: 1.7;
-  }
-  .empty svg { opacity: 0.25; margin-bottom: 12px; }
-
-  /* PER-EMPLOYEE TABLE */
-  .emp-breakdown { margin-top: 20px; }
-  .breakdown-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto auto;
-    gap: 12px;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.82rem;
-  }
-  .breakdown-row:last-child { border-bottom: none; }
-  .breakdown-row .bd-name { font-weight: 600; color: var(--text); }
-  .breakdown-row .bd-val  { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; text-align: right; white-space: nowrap; }
-
-  /* SCROLL FADE for table on narrow */
-  .table-fade {
-    position: relative;
-  }
-  .table-fade::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 40px; height: 100%;
-    background: linear-gradient(to left, var(--surface), transparent);
-    pointer-events: none;
-    display: none;
-  }
-
-  /* ACTION BUTTONS in table */
-  .actions { display: flex; gap: 5px; }
-
-  @media (max-width: 700px) {
-    .header { padding: 0 16px; }
-    .nav    { padding: 0 8px; overflow-x: auto; }
-    .main   { padding: 16px; }
-    .form-grid.g2, .form-grid.g3 { grid-template-columns: 1fr; }
-    .field.span2 { grid-column: span 1; }
-    .emp-grid { grid-template-columns: 1fr; }
-    .summary-grid { grid-template-columns: 1fr 1fr; }
-    .filter-row-right { margin-left: 0; width: 100%; }
-    .breakdown-row { grid-template-columns: 1fr 1fr; }
-    .header-date { display: none; }
-    .table-fade::after { display: block; }
-  }
+  .tab-btn { transition: all 0.2s; }
+  .tab-btn.active { background: var(--accent); color: #fff; }
+  .tab-btn:not(.active):hover { background: #E0E7FF; color: var(--accent); }
+  input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+  .card { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); border:1px solid #F1F5F9; }
+  .photo-slot { border:2px dashed #CBD5E1; border-radius:8px; background:#F8FAFC; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:120px; cursor:pointer; transition:all 0.2s; }
+  .photo-slot:hover { border-color: var(--accent); background: var(--accent-light); }
+  .badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600; }
+  .badge-orange { background:#FFF7ED; color:#C2410C; }
+  .badge-green { background:#ECFDF5; color:#065F46; }
+  .badge-blue { background:#EFF6FF; color:#1D4ED8; }
+  .stat-card { background:#fff; border-radius:12px; padding:20px 24px; box-shadow:0 1px 4px rgba(0,0,0,0.08); border:1px solid #F1F5F9; display:flex; align-items:center; gap:16px; }
+  .stat-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  table thead th { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#64748B; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  .modal-box { background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.2); width:100%; max-width:680px; max-height:90vh; overflow-y:auto; }
+  input, select, textarea { outline:none; transition: box-shadow 0.15s; }
+  input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(79,70,229,0.15); border-color: #A5B4FC !important; }
+  .btn-primary { background:var(--accent); color:#fff; padding:9px 20px; border-radius:8px; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.15s; border:none; }
+  .btn-primary:hover { background:var(--accent-dark); }
+  .btn-ghost { background:transparent; color:#64748B; padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer; border:1px solid #E2E8F0; transition:all 0.15s; }
+  .btn-ghost:hover { background:#F8FAFC; color:#1E293B; }
+  .btn-danger { background:#FEF2F2; color:var(--danger); padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; border:1px solid #FECACA; transition:all 0.15s; }
+  .btn-danger:hover { background:#FEE2E2; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:#F1F5F9; border-radius:3px; }
+  ::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:3px; }
+  .photo-preview-img { width:100%; height:130px; object-fit:cover; border-radius:6px; cursor:pointer; transition:opacity 0.15s; }
+  .photo-preview-img:hover { opacity:0.85; }
+  .live-calc { background: linear-gradient(135deg, #EEF2FF, #F0FDF4); border:1px solid #C7D2FE; border-radius:10px; padding:14px; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .fade-in { animation: fadeIn 0.25s ease; }
 </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
 
 <!-- HEADER -->
-<header class="header">
-  <div class="logo">
-    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="3" width="16" height="14" rx="3" stroke="white" stroke-width="1.5"/>
-      <path d="M6 7h8M6 10h5M6 13h3" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-      <circle cx="15" cy="13" r="2.5" fill="#3d8bff"/>
-      <path d="M14.2 13l.6.6 1.2-1.2" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+<header style="background:linear-gradient(135deg,#4F46E5,#6366F1);" class="text-white shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold leading-tight">Helper 出勤紀錄系統</h1>
+        <p class="text-xs text-indigo-200">本地存儲版本</p>
+      </div>
+    </div>
+    <nav class="flex gap-1 bg-white/10 p-1 rounded-xl flex-wrap">
+      <button onclick="switchTab('employees')" id="tab-employees" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">員工管理</button>
+      <button onclick="switchTab('attendance')" id="tab-attendance" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">打卡出勤</button>
+      <button onclick="switchTab('photos')" id="tab-photos" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">圖片紀錄</button>
+      <button onclick="switchTab('export')" id="tab-export" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">匯出報告</button>
+      <button onclick="switchTab('stats')" id="tab-stats" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">統計總覽</button>
+    </nav>
   </div>
-  <div>
-    <div class="header-title">考勤管理系統</div>
-  </div>
-  <div class="header-date" id="headerDate"></div>
 </header>
 
-<!-- NAV -->
-<nav class="nav">
-  <button class="tab-btn active" onclick="switchTab('attendance', this)">
-    新增考勤
-  </button>
-  <button class="tab-btn" onclick="switchTab('employee', this)">
-    員工管理 <span class="tab-badge" id="badge-emp">0</span>
-  </button>
-  <button class="tab-btn" onclick="switchTab('records', this)">
-    記錄查閱 <span class="tab-badge" id="badge-rec">0</span>
-  </button>
-</nav>
+<main class="max-w-7xl mx-auto px-4 py-6">
 
-<div class="main">
-
-  <!-- ═══════════════════ TAB: ATTENDANCE ═══════════════════ -->
-  <div id="tab-attendance" class="tab-panel active">
-    <div class="card">
-      <div class="card-title">
-        <div class="card-title-bar"></div>
-        新增考勤記錄
-        <span class="card-title-sub">填寫以下欄位後按「儲存記錄」</span>
-      </div>
-
-      <div class="form-grid">
-
-        <div class="field">
-          <label>員工</label>
-          <select id="att-emp"></select>
-        </div>
-
-        <div class="field">
-          <label>日期</label>
-          <input type="date" id="att-date">
-        </div>
-
-        <div class="field">
-          <label>SO 號碼</label>
-          <input type="text" id="att-so" placeholder="例: SO-2026-001">
-        </div>
-
-        <div class="field">
-          <label>開始時間</label>
-          <input type="time" id="att-start" oninput="recalcTime()">
-        </div>
-
-        <div class="field">
-          <label>原始結束時間</label>
-          <input type="time" id="att-end" oninput="recalcTime()">
-        </div>
-
-        <div class="field">
-          <label>更新後結束時間</label>
-          <div class="rbox" id="updated-end">--</div>
-        </div>
-
-        <div class="field">
-          <label>總工作時數</label>
-          <div class="rbox" id="total-hours">--</div>
-        </div>
-
-        <div class="field">
-          <label>時薪 (HKD)</label>
-          <input type="number" id="att-rate" placeholder="例: 80" min="0" step="0.5" oninput="recalcTime()">
-        </div>
-
-        <div class="field">
-          <label>薪酬小計 (HKD)</label>
-          <div class="rbox pay" id="total-pay">--</div>
-        </div>
-
-        <div class="field">
-          <label>飯鐘錢 (HKD)</label>
-          <div class="meal-field-inner">
-            <select id="att-meal"></select>
+  <!-- ====== 員工管理 ====== -->
+  <div id="page-employees" class="hidden fade-in">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="card p-5 h-fit">
+        <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          新增員工
+        </h2>
+        <form onsubmit="addEmployee(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">暱稱 <span class="text-red-500">*</span></label>
+            <input id="emp-nickname" type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="例如：阿明、Mary"/>
           </div>
-          <div class="meal-add-row">
-            <input type="number" id="meal-custom" placeholder="自訂金額" min="0">
-            <button class="btn btn-ghost btn-sm" onclick="addMealOption()">+ 加入</button>
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">中文姓名 <span class="text-slate-400">(選填)</span></label>
+            <input id="emp-zhname" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="例如：陳大明"/>
           </div>
-        </div>
-
-        <div class="field full">
-          <label>備注</label>
-          <textarea id="att-remark" placeholder="輸入備注（可選）"></textarea>
-        </div>
-
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">英文姓名 <span class="text-slate-400">(選填)</span></label>
+            <input id="emp-enname" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="例如：Chan Tai Ming"/>
+          </div>
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">備注 <span class="text-slate-400">(選填)</span></label>
+            <textarea id="emp-remark" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none" placeholder="備注資料..."></textarea>
+          </div>
+          <button type="submit" class="btn-primary w-full text-center">儲存員工</button>
+        </form>
       </div>
-
-      <div style="margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <button class="btn btn-primary" onclick="addRecord()">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-          儲存記錄
-        </button>
-        <button class="btn btn-ghost" onclick="clearAttForm()">清除表單</button>
+      <div class="card p-5 md:col-span-2">
+        <h2 class="font-semibold text-base mb-4" id="emp-count-title">員工列表</h2>
+        <div class="overflow-x-auto" id="emp-table-wrap">
+          <div class="text-center py-10 text-slate-400 text-sm" id="emp-empty">尚未新增任何員工</div>
+          <table class="w-full text-left border-collapse hidden" id="emp-table">
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-3 border-b border-slate-100">暱稱</th>
+                <th class="p-3 border-b border-slate-100">中文姓名</th>
+                <th class="p-3 border-b border-slate-100">英文姓名</th>
+                <th class="p-3 border-b border-slate-100">備注</th>
+                <th class="p-3 border-b border-slate-100 w-20 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="emp-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════ TAB: EMPLOYEE ═══════════════════ -->
-  <div id="tab-employee" class="tab-panel">
-
-    <div class="card">
-      <div class="card-title">
-        <div class="card-title-bar"></div>
-        添加新員工
+  <!-- ====== 打卡出勤 ====== -->
+  <div id="page-attendance" class="hidden fade-in">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="card p-5 lg:col-span-1 h-fit">
+        <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
+          <span class="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </span>
+          新增出勤紀錄
+        </h2>
+        <form onsubmit="addRecord(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">員工 <span class="text-red-500">*</span></label>
+            <select id="rec-emp" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">-- 請選擇員工 --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">工作編號 <span class="text-red-500">*</span></label>
+            <input id="rec-job" type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mono" placeholder="例如：JOB-20240101"/>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-600 text-slate-600 mb-1">開工時間 <span class="text-red-500">*</span></label>
+              <input id="rec-start" type="time" required onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+            </div>
+            <div>
+              <label class="block text-xs font-600 text-slate-600 mb-1">收工時間 <span class="text-red-500">*</span></label>
+              <input id="rec-end" type="time" required onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+            </div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-600 text-slate-700">包括午飯時間（不扣薪）</label>
+              <input type="checkbox" id="rec-meal-check" checked onchange="toggleMeal()" class="w-4 h-4 accent-indigo-600 cursor-pointer"/>
+            </div>
+            <div id="meal-deduct-row" class="hidden">
+              <label class="block text-xs text-slate-500 mb-1">扣除時間</label>
+              <select id="rec-meal-mins" onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="30">30 分鐘</option>
+                <option value="45">45 分鐘</option>
+                <option value="60">1 小時 (60 分鐘)</option>
+                <option value="90">1.5 小時 (90 分鐘)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-600 text-slate-600 mb-1">時薪 (HKD) <span class="text-red-500">*</span></label>
+            <input id="rec-rate" type="number" min="0" value="60" required onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mono"/>
+          </div>
+          <!-- 照片上傳 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-600 text-slate-600 mb-1">開工打卡照片</label>
+              <label class="photo-slot p-3" id="start-photo-label">
+                <svg width="22" height="22" fill="none" stroke="#94A3B8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span id="start-photo-label-text" class="text-xs text-slate-400 mt-1">選擇照片</span>
+                <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(event,'start')" id="start-photo-input"/>
+              </label>
+              <img id="start-photo-preview" class="photo-preview-img mt-2 hidden" onclick="previewPhoto(this.src)"/>
+            </div>
+            <div>
+              <label class="block text-xs font-600 text-slate-600 mb-1">收工打卡照片</label>
+              <label class="photo-slot p-3" id="end-photo-label">
+                <svg width="22" height="22" fill="none" stroke="#94A3B8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span id="end-photo-label-text" class="text-xs text-slate-400 mt-1">選擇照片</span>
+                <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(event,'end')" id="end-photo-input"/>
+              </label>
+              <img id="end-photo-preview" class="photo-preview-img mt-2 hidden" onclick="previewPhoto(this.src)"/>
+            </div>
+          </div>
+          <!-- 即時計算 -->
+          <div id="live-calc-box" class="live-calc hidden">
+            <div class="flex justify-between text-xs text-slate-500 mb-2">
+              <span>原始工時</span><span id="lc-raw" class="mono font-semibold">-</span>
+            </div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-600 font-medium">結算工時 (0.5h 倍數)</span>
+              <span id="lc-adjusted" class="mono font-bold text-indigo-600 text-sm">-</span>
+            </div>
+            <div id="lc-adjust-note" class="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1 mb-2 hidden">
+              收工時間將調整為：<strong id="lc-adj-end" class="mono"></strong>（提前 <span id="lc-diff"></span> 分鐘）
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-indigo-200">
+              <span class="text-xs text-slate-600 font-medium">預計薪酬</span>
+              <span id="lc-salary" class="font-bold text-emerald-600 text-base mono">-</span>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary w-full">儲存紀錄</button>
+        </form>
       </div>
-      <div class="form-grid g2">
 
-        <div class="field">
-          <label>姓名</label>
-          <input type="text" id="emp-name" placeholder="員工全名">
+      <!-- 紀錄列表 -->
+      <div class="card p-5 lg:col-span-2">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <h2 class="font-semibold text-base" id="rec-count-title">出勤紀錄</h2>
+          <div class="relative w-full sm:w-64">
+            <svg class="absolute left-3 top-2.5 text-slate-400 w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="rec-search" onkeyup="renderRecords()" placeholder="搜尋員工、工作編號..." class="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm"/>
+          </div>
         </div>
-
-        <div class="field">
-          <label>電話</label>
-          <input type="tel" id="emp-phone" placeholder="9123 4567">
+        <div id="rec-empty" class="text-center py-12 text-slate-400 text-sm">尚未新增任何出勤紀錄</div>
+        <div class="overflow-x-auto hidden" id="rec-table-wrap">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="p-3 border-b border-slate-100">日期</th>
+                <th class="p-3 border-b border-slate-100">員工</th>
+                <th class="p-3 border-b border-slate-100">工作編號</th>
+                <th class="p-3 border-b border-slate-100">時間</th>
+                <th class="p-3 border-b border-slate-100 text-right">工時</th>
+                <th class="p-3 border-b border-slate-100 text-right">薪酬</th>
+                <th class="p-3 border-b border-slate-100 text-center w-20">操作</th>
+              </tr>
+            </thead>
+            <tbody id="rec-tbody"></tbody>
+          </table>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <div class="field full">
-          <label>住宅地址</label>
-          <input type="text" id="emp-address" placeholder="地址">
-        </div>
-
-        <div class="field">
-          <label>銀行</label>
-          <select id="emp-bank">
-            <option value="">-- 請選擇銀行 --</option>
-            <option>滙豐銀行 (HSBC)</option>
-            <option>恒生銀行 (Hang Seng)</option>
-            <option>中國銀行 (Bank of China)</option>
-            <option>東亞銀行 (Bank of East Asia)</option>
-            <option>渣打銀行 (Standard Chartered)</option>
-            <option>花旗銀行 (Citibank)</option>
-            <option>工商銀行 (ICBC)</option>
-            <option>建設銀行 (CCB)</option>
-            <option>中信銀行 (CITIC)</option>
-            <option>大新銀行 (Dah Sing)</option>
-            <option>創興銀行 (Chong Hing)</option>
-            <option>轉數快 (FPS)</option>
-            <option>其他</option>
+  <!-- ====== 圖片紀錄 ====== -->
+  <div id="page-photos" class="hidden fade-in">
+    <div class="card p-4 mb-5">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+        <div>
+          <label class="block text-xs font-600 text-slate-600 mb-1">員工篩選</label>
+          <select id="photo-filter-emp" onchange="renderPhotos()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">所有員工</option>
           </select>
         </div>
-
-        <div class="field">
-          <label>銀行戶口號碼</label>
-          <input type="text" id="emp-account" placeholder="戶口號碼">
+        <div>
+          <label class="block text-xs font-600 text-slate-600 mb-1">開始日期</label>
+          <input type="date" id="photo-filter-from" onchange="renderPhotos()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
         </div>
-
-        <div class="field">
-          <label>預設時薪 (HKD)</label>
-          <input type="number" id="emp-rate" placeholder="例: 80" min="0" step="0.5">
+        <div>
+          <label class="block text-xs font-600 text-slate-600 mb-1">結束日期</label>
+          <input type="date" id="photo-filter-to" onchange="renderPhotos()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
         </div>
-
-      </div>
-      <div style="margin-top:20px; display:flex; gap:10px;">
-        <button class="btn btn-primary" onclick="addEmployee()">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-          添加員工
-        </button>
-        <button class="btn btn-ghost" onclick="clearEmpForm()">清除</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        <div class="card-title-bar"></div>
-        員工名單
-        <span class="card-title-sub" id="emp-count-lbl"></span>
-      </div>
-      <div class="emp-grid" id="emp-list">
-        <div class="empty">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" display="block" margin="0 auto 12px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          尚未添加任何員工
+        <div>
+          <button onclick="exportPhotosPDF()" class="btn-primary w-full flex items-center justify-center gap-2">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            匯出所選為 PDF
+          </button>
         </div>
       </div>
     </div>
-
+    <div id="photo-empty" class="text-center py-16 text-slate-400 text-sm card">
+      <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      沒有符合條件的圖片紀錄
+    </div>
+    <div id="photo-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 hidden"></div>
   </div>
 
-  <!-- ═══════════════════ TAB: RECORDS ═══════════════════ -->
-  <div id="tab-records" class="tab-panel">
-
-    <div class="summary-grid" id="summary-grid"></div>
-
-    <div class="filter-row">
-      <select id="filter-emp" onchange="renderRecords(); renderSummary();">
-        <option value="">全部員工</option>
-      </select>
-      <input type="month" id="filter-month" onchange="renderRecords(); renderSummary();" style="max-width:160px;">
-      <div class="filter-row-right">
-        <button class="btn btn-green btn-sm" onclick="exportCSV()">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <!-- ====== 匯出報告 ====== -->
+  <div id="page-export" class="hidden fade-in">
+    <div class="card p-5 mb-5">
+      <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
+        <span class="w-7 h-7 bg-sky-100 text-sky-600 rounded-lg flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </span>
+        篩選條件
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-600 text-slate-600 mb-1">員工</label>
+          <select id="export-emp" onchange="renderExport()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">所有員工</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-600 text-slate-600 mb-1">開始日期</label>
+          <input type="date" id="export-from" onchange="renderExport()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div>
+          <label class="block text-xs font-600 text-slate-600 mb-1">結束日期</label>
+          <input type="date" id="export-to" onchange="renderExport()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button onclick="exportCSV()" class="btn-primary flex items-center gap-2">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           匯出 CSV
         </button>
-        <button class="btn btn-danger btn-sm" onclick="clearAllRecords()">清除全部</button>
+        <button onclick="printReport()" class="btn-ghost flex items-center gap-2">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          列印 / PDF
+        </button>
       </div>
     </div>
-
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="table-fade table-wrap">
-        <table>
+    <div class="card p-5">
+      <div id="export-empty" class="text-center py-10 text-slate-400 text-sm">無符合條件的紀錄</div>
+      <div class="overflow-x-auto hidden" id="export-table-wrap">
+        <table class="w-full text-left border-collapse text-sm" id="export-table">
           <thead>
-            <tr>
-              <th>員工</th>
-              <th>日期</th>
-              <th>SO 號碼</th>
-              <th>開始</th>
-              <th>原始結束</th>
-              <th>更新結束</th>
-              <th>時數</th>
-              <th>時薪</th>
-              <th>薪酬</th>
-              <th>飯鐘錢</th>
-              <th>合計</th>
-              <th>備注</th>
-              <th>操作</th>
+            <tr class="bg-slate-50">
+              <th class="p-3 border-b border-slate-100">日期</th>
+              <th class="p-3 border-b border-slate-100">暱稱</th>
+              <th class="p-3 border-b border-slate-100">工作編號</th>
+              <th class="p-3 border-b border-slate-100">開工時間</th>
+              <th class="p-3 border-b border-slate-100">原收工時間</th>
+              <th class="p-3 border-b border-slate-100">更新收工時間</th>
+              <th class="p-3 border-b border-slate-100">午飯安排</th>
+              <th class="p-3 border-b border-slate-100 text-right">結算工時</th>
+              <th class="p-3 border-b border-slate-100 text-right">時薪</th>
+              <th class="p-3 border-b border-slate-100 text-right">總薪金</th>
             </tr>
           </thead>
-          <tbody id="records-body">
-            <tr><td colspan="13"><div class="empty">尚無記錄</div></td></tr>
-          </tbody>
+          <tbody id="export-tbody"></tbody>
+          <tfoot id="export-tfoot"></tfoot>
         </table>
       </div>
     </div>
-
-    <div id="breakdown-section"></div>
-
   </div>
 
-</div>
+  <!-- ====== 統計總覽 ====== -->
+  <div id="page-stats" class="hidden fade-in">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue-50 text-blue-600">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 mb-0.5">總出勤次數</p>
+          <p class="text-2xl font-bold text-slate-800 mono" id="stat-total-records">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-indigo-50 text-indigo-600">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 mb-0.5">總結算工時</p>
+          <p class="text-2xl font-bold text-slate-800 mono" id="stat-total-hours">0 <span class="text-sm font-normal text-slate-500">小時</span></p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-emerald-50 text-emerald-600">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 mb-0.5">總應付薪酬</p>
+          <p class="text-2xl font-bold text-emerald-600 mono" id="stat-total-pay">HK$0</p>
+        </div>
+      </div>
+    </div>
+    <div class="card p-5">
+      <h2 class="font-semibold text-base mb-4">員工結算明細</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-50">
+              <th class="p-3 border-b border-slate-100">員工</th>
+              <th class="p-3 border-b border-slate-100 text-center">出勤次數</th>
+              <th class="p-3 border-b border-slate-100 text-right">總結算工時</th>
+              <th class="p-3 border-b border-slate-100 text-right">應付薪酬</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-<!-- EDIT MODAL -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <div class="modal-title">
-      <div class="card-title-bar"></div>
-      編輯考勤記錄
+</main>
+
+<!-- 紀錄詳情 Modal -->
+<div id="record-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="sticky top-0 bg-white flex justify-between items-center p-4 border-b">
+      <h3 class="font-bold text-base">出勤紀錄詳情</h3>
+      <button onclick="closeModal('record-modal')" class="text-slate-400 hover:text-slate-700">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-    <div class="form-grid g2" id="editFormGrid">
-      <div class="field">
-        <label>員工</label>
-        <select id="edit-emp"></select>
-      </div>
-      <div class="field">
-        <label>日期</label>
-        <input type="date" id="edit-date">
-      </div>
-      <div class="field">
-        <label>SO 號碼</label>
-        <input type="text" id="edit-so">
-      </div>
-      <div class="field">
-        <label>開始時間</label>
-        <input type="time" id="edit-start" oninput="recalcEdit()">
-      </div>
-      <div class="field">
-        <label>原始結束時間</label>
-        <input type="time" id="edit-end" oninput="recalcEdit()">
-      </div>
-      <div class="field">
-        <label>更新後結束</label>
-        <div class="rbox" id="edit-updated-end">--</div>
-      </div>
-      <div class="field">
-        <label>總時數</label>
-        <div class="rbox" id="edit-total-hours">--</div>
-      </div>
-      <div class="field">
-        <label>時薪 (HKD)</label>
-        <input type="number" id="edit-rate" min="0" step="0.5" oninput="recalcEdit()">
-      </div>
-      <div class="field">
-        <label>薪酬小計</label>
-        <div class="rbox pay" id="edit-total-pay">--</div>
-      </div>
-      <div class="field">
-        <label>飯鐘錢 (HKD)</label>
-        <select id="edit-meal"></select>
-      </div>
-      <div class="field full">
-        <label>備注</label>
-        <textarea id="edit-remark"></textarea>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeEditModal()">取消</button>
-      <button class="btn btn-primary" onclick="saveEdit()">儲存更改</button>
-    </div>
+    <div id="record-modal-content" class="p-5"></div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- 照片放大 Modal -->
+<div id="photo-modal" class="modal-overlay hidden" onclick="closeModal('photo-modal')">
+  <img id="photo-modal-img" src="" alt="放大照片" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"/>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium hidden z-50 flex items-center gap-2">
+  <span id="toast-msg"></span>
+</div>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════════════════════════
-let employees   = JSON.parse(localStorage.getItem('att2_employees') || '[]');
-let records     = JSON.parse(localStorage.getItem('att2_records')   || '[]');
-let mealOptions = JSON.parse(localStorage.getItem('att2_meal')      || '[30,35,40,45,50]');
-let editingId   = null;
+// ---- DATA ----
+let employees = JSON.parse(localStorage.getItem('hk_employees') || '[]');
+let records = JSON.parse(localStorage.getItem('hk_records') || '[]');
+let startPhotoData = null;
+let endPhotoData = null;
 
-// ══════════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  const now = new Date();
-  document.getElementById('headerDate').textContent =
-    now.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
-  document.getElementById('att-date').value = toLocalDateStr(now);
-
-  renderMealSelects();
-  rebuildEmpDropdowns();
-  renderEmployeeList();
-  renderRecords();
-  renderSummary();
-  updateBadges();
-});
-
-function toLocalDateStr(d) {
-  return d.getFullYear() + '-'
-    + String(d.getMonth()+1).padStart(2,'0') + '-'
-    + String(d.getDate()).padStart(2,'0');
-}
-
-// ══════════════════════════════════════════════════════════════
-// PERSIST
-// ══════════════════════════════════════════════════════════════
 function save() {
-  localStorage.setItem('att2_employees', JSON.stringify(employees));
-  localStorage.setItem('att2_records',   JSON.stringify(records));
-  localStorage.setItem('att2_meal',      JSON.stringify(mealOptions));
+  localStorage.setItem('hk_employees', JSON.stringify(employees));
+  localStorage.setItem('hk_records', JSON.stringify(records));
 }
 
-// ══════════════════════════════════════════════════════════════
-// TABS
-// ══════════════════════════════════════════════════════════════
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'records')  { renderRecords(); renderSummary(); }
-  if (name === 'employee') { renderEmployeeList(); }
+// ---- UTILS ----
+function getEmpById(id) { return employees.find(e => e.id === id); }
+
+function getEmpDisplay(emp) {
+  if (!emp) return '未知員工';
+  const names = [emp.zhName, emp.enName].filter(Boolean).join(' / ');
+  return emp.nickname + (names ? ` (${names})` : '');
 }
 
-// ══════════════════════════════════════════════════════════════
-// BADGES
-// ══════════════════════════════════════════════════════════════
-function updateBadges() {
-  document.getElementById('badge-emp').textContent = employees.length;
-  document.getElementById('badge-rec').textContent = records.length;
+function calcHours(start, end, deductMins) {
+  if (!start || !end) return null;
+  const s = new Date('2000-01-01T' + start);
+  let e = new Date('2000-01-01T' + end);
+  if (e <= s) e.setDate(e.getDate() + 1);
+  let mins = Math.floor((e - s) / 60000) - parseInt(deductMins || 0);
+  if (mins < 0) mins = 0;
+  const remainder = mins % 30;
+  const adjMins = mins - remainder;
+  const adjE = new Date(e.getTime() - remainder * 60000);
+  return {
+    rawHours: (mins / 60).toFixed(2),
+    adjHours: adjMins / 60,
+    adjEnd: adjE.getHours().toString().padStart(2,'0') + ':' + adjE.getMinutes().toString().padStart(2,'0'),
+    diff: remainder
+  };
 }
 
-// ══════════════════════════════════════════════════════════════
-// TOAST
-// ══════════════════════════════════════════════════════════════
-let _tt;
-function showToast(msg, type = 'ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type === 'error' ? ' error' : type === 'warn' ? ' warn' : '');
-  clearTimeout(_tt);
-  _tt = setTimeout(() => t.classList.remove('show'), 3000);
+function toast(msg, success = true) {
+  const el = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  msgEl.textContent = msg;
+  el.style.background = success ? '#1E293B' : '#DC2626';
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 2500);
 }
 
-// ══════════════════════════════════════════════════════════════
-// TIME UTILS
-// ══════════════════════════════════════════════════════════════
-function toMins(t) {
-  if (!t) return 0;
-  const [h,m] = t.split(':').map(Number);
-  return h*60 + m;
-}
-function fromMins(m) {
-  return String(Math.floor(m/60)%24).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
-}
-function calcWork(start, end) {
-  const sm = toMins(start), em = toMins(end);
-  if (em <= sm) return null;
-  const diff = em - sm;
-  const units = Math.floor(diff/30);
-  const adj = units * 30;
-  return { adjEnd: fromMins(sm + adj), hours: adj/60, changed: fromMins(sm+adj) !== end };
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function previewPhoto(src) {
+  document.getElementById('photo-modal-img').src = src;
+  document.getElementById('photo-modal').classList.remove('hidden');
 }
 
-// ══════════════════════════════════════════════════════════════
-// RECALC (Add form)
-// ══════════════════════════════════════════════════════════════
-function recalcTime() {
-  const start = document.getElementById('att-start').value;
-  const end   = document.getElementById('att-end').value;
-  const rate  = parseFloat(document.getElementById('att-rate').value) || 0;
-  const ue    = document.getElementById('updated-end');
-  const th    = document.getElementById('total-hours');
-  const tp    = document.getElementById('total-pay');
-
-  if (!start || !end) {
-    ue.textContent = '--'; ue.className='rbox';
-    th.textContent = '--'; th.className='rbox';
-    tp.textContent = '--'; tp.className='rbox pay';
-    return;
-  }
-  const r = calcWork(start, end);
-  if (!r) {
-    ue.textContent = '--'; ue.className='rbox';
-    th.textContent = '結束時間必須晚於開始'; th.className='rbox err';
-    tp.textContent = '--'; tp.className='rbox pay';
-    return;
-  }
-  ue.textContent = r.adjEnd;
-  ue.className = r.changed ? 'rbox warn' : 'rbox';
-  th.textContent = r.hours.toFixed(1) + ' 小時';
-  th.className = 'rbox';
-  tp.textContent = rate > 0 ? 'HKD ' + (r.hours * rate).toFixed(2) : '--';
-  tp.className = 'rbox pay';
-}
-
-// ══════════════════════════════════════════════════════════════
-// RECALC (Edit form)
-// ══════════════════════════════════════════════════════════════
-function recalcEdit() {
-  const start = document.getElementById('edit-start').value;
-  const end   = document.getElementById('edit-end').value;
-  const rate  = parseFloat(document.getElementById('edit-rate').value) || 0;
-  const ue    = document.getElementById('edit-updated-end');
-  const th    = document.getElementById('edit-total-hours');
-  const tp    = document.getElementById('edit-total-pay');
-
-  if (!start || !end) {
-    ue.textContent='--'; th.textContent='--'; tp.textContent='--'; return;
-  }
-  const r = calcWork(start, end);
-  if (!r) { th.textContent='結束時間必須晚於開始'; th.className='rbox err'; return; }
-  ue.textContent = r.adjEnd;
-  ue.className = r.changed ? 'rbox warn' : 'rbox';
-  th.textContent = r.hours.toFixed(1) + ' 小時';
-  th.className = 'rbox';
-  tp.textContent = rate > 0 ? 'HKD ' + (r.hours * rate).toFixed(2) : '--';
-  tp.className = 'rbox pay';
-}
-
-// ══════════════════════════════════════════════════════════════
-// MEAL OPTIONS
-// ══════════════════════════════════════════════════════════════
-function renderMealSelects() {
-  ['att-meal','edit-meal'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = mealOptions.map(v =>
-      `<option value="${v}"${String(v)===String(cur)?' selected':''}>$${v}</option>`
-    ).join('');
+// ---- TAB ----
+function switchTab(tab) {
+  ['employees','attendance','photos','export','stats'].forEach(t => {
+    document.getElementById('page-' + t).classList.add('hidden');
+    document.getElementById('tab-' + t).classList.remove('active');
   });
+  document.getElementById('page-' + tab).classList.remove('hidden');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'attendance') { populateEmpSelects(); renderRecords(); }
+  if (tab === 'employees') renderEmployees();
+  if (tab === 'stats') renderStats();
+  if (tab === 'export') { populateEmpSelects(); renderExport(); }
+  if (tab === 'photos') { populateEmpSelects(); renderPhotos(); }
 }
 
-function addMealOption() {
-  const val = parseInt(document.getElementById('meal-custom').value);
-  if (isNaN(val) || val < 0) { showToast('請輸入有效金額','error'); return; }
-  if (mealOptions.includes(val)) { showToast('此選項已存在','warn'); return; }
-  mealOptions.push(val);
-  mealOptions.sort((a,b)=>a-b);
-  save();
-  renderMealSelects();
-  document.getElementById('meal-custom').value = '';
-  showToast('已加入飯鐘錢選項: $'+val);
-}
-
-// ══════════════════════════════════════════════════════════════
-// EMPLOYEE DROPDOWNS
-// ══════════════════════════════════════════════════════════════
-function rebuildEmpDropdowns() {
-  const opts = '<option value="">-- 請選擇員工 --</option>' +
-    employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
-  document.getElementById('att-emp').innerHTML = opts;
-  document.getElementById('edit-emp').innerHTML = opts;
-
-  const filterOpts = '<option value="">全部員工</option>' +
-    employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
-  document.getElementById('filter-emp').innerHTML = filterOpts;
-}
-
-// ══════════════════════════════════════════════════════════════
-// ADD EMPLOYEE
-// ══════════════════════════════════════════════════════════════
-function addEmployee() {
-  const name    = document.getElementById('emp-name').value.trim();
-  const phone   = document.getElementById('emp-phone').value.trim();
-  const address = document.getElementById('emp-address').value.trim();
-  const bank    = document.getElementById('emp-bank').value;
-  const account = document.getElementById('emp-account').value.trim();
-  const rate    = parseFloat(document.getElementById('emp-rate').value) || 0;
-
-  if (!name) { showToast('請輸入員工姓名','error'); return; }
-
-  employees.push({ id:'e'+Date.now(), name, phone, address, bank, account, rate });
-  save();
-  rebuildEmpDropdowns();
-  renderEmployeeList();
-  clearEmpForm();
-  updateBadges();
-  showToast('已添加員工：' + name);
-}
-
-function clearEmpForm() {
-  ['emp-name','emp-phone','emp-address','emp-account','emp-rate'].forEach(id=>{
-    document.getElementById(id).value='';
+// ---- EMPLOYEES ----
+function addEmployee(e) {
+  e.preventDefault();
+  const nickname = document.getElementById('emp-nickname').value.trim();
+  if (!nickname) { toast('請填寫暱稱', false); return; }
+  employees.push({
+    id: Date.now().toString(),
+    nickname,
+    zhName: document.getElementById('emp-zhname').value.trim(),
+    enName: document.getElementById('emp-enname').value.trim(),
+    remark: document.getElementById('emp-remark').value.trim()
   });
-  document.getElementById('emp-bank').value='';
-}
-
-// ══════════════════════════════════════════════════════════════
-// RENDER EMPLOYEE LIST
-// ══════════════════════════════════════════════════════════════
-function renderEmployeeList() {
-  const el = document.getElementById('emp-list');
-  document.getElementById('emp-count-lbl').textContent = employees.length
-    ? `共 ${employees.length} 位員工`
-    : '';
-
-  if (!employees.length) {
-    el.innerHTML = `<div class="empty">
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="display:block;margin:0 auto 12px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-      尚未添加任何員工
-    </div>`;
-    return;
-  }
-
-  el.innerHTML = employees.map(e => {
-    const recs = records.filter(r=>r.empId===e.id);
-    const totalH = recs.reduce((s,r)=>s+r.totalHours,0);
-    const totalPay = recs.reduce((s,r)=>s+(r.totalPay||0),0);
-    const initials = e.name.length >= 2 ? e.name.slice(0,2) : e.name;
-
-    return `
-    <div class="emp-card">
-      <div class="emp-head">
-        <div class="emp-avatar">${initials}</div>
-        <div>
-          <div class="emp-avatar-name">${e.name}</div>
-          <div class="emp-avatar-id">#${e.id.slice(-6)}</div>
-        </div>
-      </div>
-      <div class="emp-rows">
-        ${e.phone    ? `<div class="emp-row"><span class="emp-row-lbl">電話</span><span class="emp-row-val">${e.phone}</span></div>` : ''}
-        ${e.address  ? `<div class="emp-row"><span class="emp-row-lbl">地址</span><span class="emp-row-val">${e.address}</span></div>` : ''}
-        ${e.bank     ? `<div class="emp-row"><span class="emp-row-lbl">銀行</span><span class="emp-row-val">${e.bank}</span></div>` : ''}
-        ${e.account  ? `<div class="emp-row"><span class="emp-row-lbl">戶口</span><span class="emp-row-val mono">${e.account}</span></div>` : ''}
-        ${e.rate     ? `<div class="emp-row"><span class="emp-row-lbl">時薪</span><span class="emp-row-val mono">HKD ${e.rate}/h</span></div>` : ''}
-      </div>
-      <div class="emp-footer">
-        <div class="emp-stats">
-          <div class="emp-stat">
-            <div class="emp-stat-val">${recs.length}</div>
-            <div class="emp-stat-lbl">記錄</div>
-          </div>
-          <div class="emp-stat">
-            <div class="emp-stat-val">${totalH.toFixed(1)}h</div>
-            <div class="emp-stat-lbl">工時</div>
-          </div>
-          ${totalPay > 0 ? `<div class="emp-stat">
-            <div class="emp-stat-val" style="color:var(--orange)">$${totalPay.toFixed(0)}</div>
-            <div class="emp-stat-lbl">薪酬</div>
-          </div>` : ''}
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-yellow btn-xs" onclick="openEditEmp('${e.id}')">編輯</button>
-          <button class="btn btn-danger btn-xs" onclick="deleteEmployee('${e.id}')">刪除</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  save();
+  renderEmployees();
+  ['emp-nickname','emp-zhname','emp-enname','emp-remark'].forEach(id => document.getElementById(id).value = '');
+  toast('員工已新增');
 }
 
 function deleteEmployee(id) {
-  if (!confirm('確定要刪除此員工？相關考勤記錄不會被刪除。')) return;
-  employees = employees.filter(e=>e.id!==id);
+  if (!confirm('確定刪除此員工？相關出勤紀錄將保留。')) return;
+  employees = employees.filter(e => e.id !== id);
   save();
-  rebuildEmpDropdowns();
-  renderEmployeeList();
-  updateBadges();
-  showToast('員工已刪除');
+  renderEmployees();
+  toast('員工已刪除');
 }
 
-function openEditEmp(id) {
-  const e = employees.find(x=>x.id===id);
-  if (!e) return;
-  document.getElementById('emp-name').value    = e.name;
-  document.getElementById('emp-phone').value   = e.phone || '';
-  document.getElementById('emp-address').value = e.address || '';
-  document.getElementById('emp-bank').value    = e.bank || '';
-  document.getElementById('emp-account').value = e.account || '';
-  document.getElementById('emp-rate').value    = e.rate || '';
-  // remove old and save as new
-  employees = employees.filter(x=>x.id!==id);
-  save();
-  showToast('請修改資料後重新添加員工','warn');
+function renderEmployees() {
+  const tbody = document.getElementById('emp-tbody');
+  const table = document.getElementById('emp-table');
+  const empty = document.getElementById('emp-empty');
+  document.getElementById('emp-count-title').textContent = `員工列表 (${employees.length})`;
+  if (employees.length === 0) { table.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+  table.classList.remove('hidden'); empty.classList.add('hidden');
+  tbody.innerHTML = employees.map(emp => `
+    <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+      <td class="p-3 font-semibold text-indigo-600">${emp.nickname}</td>
+      <td class="p-3 text-sm">${emp.zhName || '<span class="text-slate-300">-</span>'}</td>
+      <td class="p-3 text-sm">${emp.enName || '<span class="text-slate-300">-</span>'}</td>
+      <td class="p-3 text-xs text-slate-500">${emp.remark || '<span class="text-slate-300">-</span>'}</td>
+      <td class="p-3 text-center"><button onclick="deleteEmployee('${emp.id}')" class="btn-danger">刪除</button></td>
+    </tr>
+  `).join('');
 }
 
-// ══════════════════════════════════════════════════════════════
-// ADD RECORD
-// ══════════════════════════════════════════════════════════════
-function addRecord() {
-  const empId  = document.getElementById('att-emp').value;
-  const date   = document.getElementById('att-date').value;
-  const so     = document.getElementById('att-so').value.trim();
-  const start  = document.getElementById('att-start').value;
-  const end    = document.getElementById('att-end').value;
-  const rate   = parseFloat(document.getElementById('att-rate').value) || 0;
-  const meal   = document.getElementById('att-meal').value;
-  const remark = document.getElementById('att-remark').value.trim();
-
-  if (!empId)        { showToast('請選擇員工','error'); return; }
-  if (!date)         { showToast('請選擇日期','error'); return; }
-  if (!start || !end){ showToast('請填寫開始及結束時間','error'); return; }
-
-  const r = calcWork(start, end);
-  if (!r) { showToast('結束時間必須晚於開始時間','error'); return; }
-
-  const emp = employees.find(e=>e.id===empId);
-  const totalPay = rate > 0 ? r.hours * rate : 0;
-
-  records.push({
-    id: 'r'+Date.now(),
-    empId, empName: emp ? emp.name : '(已刪除)',
-    date, so, start, end,
-    updatedEnd: r.adjEnd,
-    totalHours: r.hours,
-    rate, totalPay,
-    meal, remark,
-    createdAt: new Date().toISOString()
-  });
-  save();
-  renderRecords();
-  renderSummary();
-  renderEmployeeList();
-  clearAttForm();
-  updateBadges();
-  showToast('記錄已儲存');
+// ---- POPULATE SELECTS ----
+function populateEmpSelects() {
+  const opts = '<option value="">所有員工</option>' + employees.map(e => `<option value="${e.id}">${getEmpDisplay(e)}</option>`).join('');
+  const recEmp = document.getElementById('rec-emp');
+  if (recEmp) recEmp.innerHTML = '<option value="">-- 請選擇員工 --</option>' + employees.map(e => `<option value="${e.id}">${getEmpDisplay(e)}</option>`).join('');
+  ['export-emp','photo-filter-emp'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = opts; });
 }
 
-function clearAttForm() {
-  ['att-emp','att-so','att-start','att-end','att-remark','att-rate'].forEach(id=>{
-    document.getElementById(id).value='';
-  });
-  document.getElementById('att-date').value = toLocalDateStr(new Date());
-  document.getElementById('updated-end').textContent='--';
-  document.getElementById('updated-end').className='rbox';
-  document.getElementById('total-hours').textContent='--';
-  document.getElementById('total-hours').className='rbox';
-  document.getElementById('total-pay').textContent='--';
-  document.getElementById('total-pay').className='rbox pay';
+// ---- ATTENDANCE ----
+function toggleMeal() {
+  const checked = document.getElementById('rec-meal-check').checked;
+  document.getElementById('meal-deduct-row').classList.toggle('hidden', checked);
+  liveCalc();
 }
 
-// ══════════════════════════════════════════════════════════════
-// EDIT MODAL
-// ══════════════════════════════════════════════════════════════
-function openEditModal(id) {
-  const rec = records.find(r=>r.id===id);
-  if (!rec) return;
-  editingId = id;
-
-  rebuildEmpDropdowns();
-  renderMealSelects();
-
-  document.getElementById('edit-emp').value    = rec.empId;
-  document.getElementById('edit-date').value   = rec.date;
-  document.getElementById('edit-so').value     = rec.so || '';
-  document.getElementById('edit-start').value  = rec.start;
-  document.getElementById('edit-end').value    = rec.end;
-  document.getElementById('edit-rate').value   = rec.rate || '';
-  document.getElementById('edit-meal').value   = rec.meal;
-  document.getElementById('edit-remark').value = rec.remark || '';
-  recalcEdit();
-  document.getElementById('editModal').classList.add('open');
-}
-
-function closeEditModal() {
-  document.getElementById('editModal').classList.remove('open');
-  editingId = null;
-}
-
-function saveEdit() {
-  const id    = editingId;
-  const idx   = records.findIndex(r=>r.id===id);
-  if (idx === -1) return;
-
-  const empId  = document.getElementById('edit-emp').value;
-  const date   = document.getElementById('edit-date').value;
-  const so     = document.getElementById('edit-so').value.trim();
-  const start  = document.getElementById('edit-start').value;
-  const end    = document.getElementById('edit-end').value;
-  const rate   = parseFloat(document.getElementById('edit-rate').value) || 0;
-  const meal   = document.getElementById('edit-meal').value;
-  const remark = document.getElementById('edit-remark').value.trim();
-
-  if (!empId || !date || !start || !end) { showToast('請填寫所有必填欄位','error'); return; }
-
-  const r = calcWork(start, end);
-  if (!r) { showToast('結束時間必須晚於開始時間','error'); return; }
-
-  const emp = employees.find(e=>e.id===empId);
-  records[idx] = {
-    ...records[idx],
-    empId, empName: emp ? emp.name : records[idx].empName,
-    date, so, start, end,
-    updatedEnd: r.adjEnd,
-    totalHours: r.hours,
-    rate, totalPay: rate > 0 ? r.hours * rate : 0,
-    meal, remark
+function handlePhoto(e, type) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    if (type === 'start') {
+      startPhotoData = reader.result;
+      const img = document.getElementById('start-photo-preview');
+      img.src = reader.result; img.classList.remove('hidden');
+      document.getElementById('start-photo-label-text').textContent = '已選擇';
+    } else {
+      endPhotoData = reader.result;
+      const img = document.getElementById('end-photo-preview');
+      img.src = reader.result; img.classList.remove('hidden');
+      document.getElementById('end-photo-label-text').textContent = '已選擇';
+    }
   };
-  save();
-  renderRecords();
-  renderSummary();
-  renderEmployeeList();
-  closeEditModal();
-  showToast('記錄已更新');
+  reader.readAsDataURL(file);
 }
 
-document.getElementById('editModal').addEventListener('click', function(e) {
-  if (e.target === this) closeEditModal();
-});
+function liveCalc() {
+  const start = document.getElementById('rec-start').value;
+  const end = document.getElementById('rec-end').value;
+  const includeMeal = document.getElementById('rec-meal-check').checked;
+  const deduct = includeMeal ? 0 : document.getElementById('rec-meal-mins').value;
+  const rate = parseFloat(document.getElementById('rec-rate').value) || 0;
+  const box = document.getElementById('live-calc-box');
+  if (!start || !end) { box.classList.add('hidden'); return; }
+  const c = calcHours(start, end, deduct);
+  if (!c) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  document.getElementById('lc-raw').textContent = c.rawHours + ' 小時';
+  document.getElementById('lc-adjusted').textContent = c.adjHours + ' 小時';
+  document.getElementById('lc-salary').textContent = 'HK$ ' + (c.adjHours * rate).toFixed(1);
+  const note = document.getElementById('lc-adjust-note');
+  if (c.diff > 0) {
+    note.classList.remove('hidden');
+    document.getElementById('lc-adj-end').textContent = c.adjEnd;
+    document.getElementById('lc-diff').textContent = c.diff;
+  } else {
+    note.classList.add('hidden');
+  }
+}
 
-// ══════════════════════════════════════════════════════════════
-// RENDER RECORDS
-// ══════════════════════════════════════════════════════════════
-function getFilteredRecords() {
-  const filterEmp   = document.getElementById('filter-emp').value;
-  const filterMonth = document.getElementById('filter-month').value;
+function addRecord(e) {
+  e.preventDefault();
+  const empId = document.getElementById('rec-emp').value;
+  const jobCode = document.getElementById('rec-job').value.trim();
+  const start = document.getElementById('rec-start').value;
+  const end = document.getElementById('rec-end').value;
+  const includeMeal = document.getElementById('rec-meal-check').checked;
+  const deduct = includeMeal ? 0 : document.getElementById('rec-meal-mins').value;
+  const rate = parseFloat(document.getElementById('rec-rate').value) || 0;
+  if (!empId || !jobCode || !start || !end) { toast('請填寫所有必填欄位', false); return; }
+  const c = calcHours(start, end, deduct);
+  if (!c) { toast('時間計算錯誤', false); return; }
+  records.unshift({
+    id: Date.now().toString(),
+    date: new Date().toISOString().split('T')[0],
+    empId, jobCode, startTime: start, endTime: end,
+    includeMeal, mealDeduct: deduct,
+    hourlyRate: rate,
+    rawHours: parseFloat(c.rawHours),
+    adjHours: c.adjHours,
+    adjEnd: c.adjEnd,
+    diff: c.diff,
+    totalSalary: c.adjHours * rate,
+    startPhoto: startPhotoData,
+    endPhoto: endPhotoData
+  });
+  save();
+  renderRecords();
+  // Reset
+  document.getElementById('rec-emp').value = '';
+  document.getElementById('rec-job').value = '';
+  document.getElementById('rec-start').value = '';
+  document.getElementById('rec-end').value = '';
+  document.getElementById('rec-rate').value = '60';
+  document.getElementById('rec-meal-check').checked = true;
+  document.getElementById('meal-deduct-row').classList.add('hidden');
+  document.getElementById('live-calc-box').classList.add('hidden');
+  document.getElementById('start-photo-preview').classList.add('hidden');
+  document.getElementById('end-photo-preview').classList.add('hidden');
+  document.getElementById('start-photo-label-text').textContent = '選擇照片';
+  document.getElementById('end-photo-label-text').textContent = '選擇照片';
+  startPhotoData = null; endPhotoData = null;
+  toast('出勤紀錄已儲存');
+}
+
+function deleteRecord(id) {
+  if (!confirm('確定刪除此紀錄？')) return;
+  records = records.filter(r => r.id !== id);
+  save();
+  renderRecords();
+  closeModal('record-modal');
+  toast('紀錄已刪除');
+}
+
+function openRecordModal(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  const emp = getEmpById(r.empId);
+  const isAdj = r.diff > 0;
+  document.getElementById('record-modal-content').innerHTML = `
+    <div class="space-y-5">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <div class="col-span-2">
+          <p class="text-xs text-slate-400 mb-0.5">員工</p>
+          <p class="font-semibold text-base">${getEmpDisplay(emp)}</p>
+        </div>
+        <div><p class="text-xs text-slate-400 mb-0.5">工作編號</p><p class="font-medium mono">${r.jobCode}</p></div>
+        <div><p class="text-xs text-slate-400 mb-0.5">日期</p><p class="font-medium">${r.date}</p></div>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+          <span class="font-semibold text-sm">時間與薪酬</span>
+          <span class="badge badge-blue">時薪 HK$${r.hourlyRate}</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div class="space-y-2">
+            <div class="flex justify-between"><span class="text-slate-500">開工時間：</span><span class="font-medium mono">${r.startTime}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">原收工時間：</span><span class="mono line-through text-slate-400">${r.endTime}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">更新收工時間：</span><span class="mono font-semibold ${isAdj ? 'text-amber-600' : 'text-emerald-600'}">${r.adjEnd}</span></div>
+          </div>
+          <div class="space-y-2">
+            <div class="flex justify-between"><span class="text-slate-500">午飯安排：</span><span>${r.includeMeal ? '包括午飯（不扣時）' : '扣除 ' + r.mealDeduct + ' 分鐘'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">原始工時：</span><span class="mono">${r.rawHours.toFixed(2)} h</span></div>
+            <div class="flex justify-between font-semibold"><span class="text-slate-600">結算工時：</span><span class="mono text-indigo-600">${r.adjHours} h</span></div>
+          </div>
+        </div>
+        ${isAdj ? `<div class="mt-3 text-xs bg-amber-50 text-amber-800 rounded-lg px-3 py-2 flex gap-2 items-start"><svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>結束時間往前調整 ${r.diff} 分鐘，以符合 0.5 小時倍數計算規則。</div>` : ''}
+        <div class="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center">
+          <span class="font-semibold">總薪酬</span>
+          <span class="text-2xl font-bold text-emerald-600 mono">HK$ ${r.totalSalary.toFixed(1)}</span>
+        </div>
+      </div>
+      <div>
+        <h4 class="font-semibold text-sm mb-3">打卡照片</h4>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="border border-slate-100 rounded-xl p-3 bg-slate-50">
+            <p class="text-xs text-center text-slate-400 mb-2">開工打卡</p>
+            ${r.startPhoto ? `<img src="${r.startPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>` : `<div class="h-28 flex flex-col items-center justify-center text-slate-300"><svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
+          </div>
+          <div class="border border-slate-100 rounded-xl p-3 bg-slate-50">
+            <p class="text-xs text-center text-slate-400 mb-2">收工打卡</p>
+            ${r.endPhoto ? `<img src="${r.endPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>` : `<div class="h-28 flex flex-col items-center justify-center text-slate-300"><svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
+          </div>
+        </div>
+      </div>
+      <button onclick="deleteRecord('${r.id}')" class="w-full py-2 rounded-lg border-2 border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition">刪除此紀錄</button>
+    </div>
+  `;
+  document.getElementById('record-modal').classList.remove('hidden');
+}
+
+function renderRecords() {
+  const search = (document.getElementById('rec-search')?.value || '').toLowerCase();
+  const filtered = records.filter(r => {
+    const emp = getEmpById(r.empId);
+    return r.jobCode.toLowerCase().includes(search)
+      || r.date.includes(search)
+      || (emp && getEmpDisplay(emp).toLowerCase().includes(search));
+  });
+  const tbody = document.getElementById('rec-tbody');
+  const wrap = document.getElementById('rec-table-wrap');
+  const empty = document.getElementById('rec-empty');
+  document.getElementById('rec-count-title').textContent = `出勤紀錄 (${records.length})`;
+  if (filtered.length === 0) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+  wrap.classList.remove('hidden'); empty.classList.add('hidden');
+  tbody.innerHTML = filtered.map(r => {
+    const emp = getEmpById(r.empId);
+    const isAdj = r.diff > 0;
+    return `
+      <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer" onclick="openRecordModal('${r.id}')">
+        <td class="p-3 text-xs text-slate-400">${r.date}</td>
+        <td class="p-3 font-medium text-sm">${emp ? emp.nickname : '已刪除'}</td>
+        <td class="p-3 mono text-xs text-indigo-600">${r.jobCode}</td>
+        <td class="p-3">
+          <div class="text-xs line-through text-slate-300 mono">${r.startTime} - ${r.endTime}</div>
+          <div class="text-sm font-medium mono flex items-center gap-1">${r.startTime} - <span class="${isAdj ? 'text-amber-600' : 'text-emerald-600'}">${r.adjEnd}</span>${isAdj ? `<span class="badge badge-orange ml-1">-${r.diff}m</span>` : ''}</div>
+        </td>
+        <td class="p-3 text-right mono text-sm font-semibold">${r.adjHours}h</td>
+        <td class="p-3 text-right mono text-sm font-semibold text-emerald-600">$${r.totalSalary.toFixed(1)}</td>
+        <td class="p-3 text-center"><button onclick="event.stopPropagation();deleteRecord('${r.id}')" class="btn-danger">刪除</button></td>
+      </tr>`;
+  }).join('');
+}
+
+// ---- PHOTOS ----
+function renderPhotos() {
+  const empFilter = document.getElementById('photo-filter-emp').value;
+  const from = document.getElementById('photo-filter-from').value;
+  const to = document.getElementById('photo-filter-to').value;
+  const filtered = records.filter(r => {
+    if (empFilter && r.empId !== empFilter) return false;
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
+    return true;
+  });
+  const grid = document.getElementById('photo-grid');
+  const empty = document.getElementById('photo-empty');
+  if (filtered.length === 0) { grid.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+  grid.classList.remove('hidden'); empty.classList.add('hidden');
+  grid.innerHTML = filtered.map(r => {
+    const emp = getEmpById(r.empId);
+    const isAdj = r.diff > 0;
+    return `
+      <div class="card overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-50 to-slate-50 px-4 py-3 border-b border-slate-100">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-bold text-indigo-600">${emp ? emp.nickname : '未知'}</p>
+              <p class="text-xs text-slate-400">${emp && (emp.zhName || emp.enName) ? [emp.zhName, emp.enName].filter(Boolean).join(' / ') : ''}</p>
+            </div>
+            <span class="badge badge-blue mono">${r.jobCode}</span>
+          </div>
+          <div class="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
+            <span>${r.date}</span>
+            <span>開工：<strong class="text-slate-700 mono">${r.startTime}</strong></span>
+            <span>收工：<strong class="${isAdj ? 'text-amber-600' : 'text-emerald-600'} mono">${r.adjEnd}</strong>${isAdj ? ` <span class="badge badge-orange">-${r.diff}m</span>` : ''}</span>
+            <span>工時：<strong class="text-indigo-600 mono">${r.adjHours}h</strong></span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 p-3">
+          <div>
+            <p class="text-xs text-center text-slate-400 mb-1.5 font-medium">開工打卡</p>
+            ${r.startPhoto
+              ? `<img src="${r.startPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>`
+              : `<div class="h-28 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-300"><svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
+          </div>
+          <div>
+            <p class="text-xs text-center text-slate-400 mb-1.5 font-medium">收工打卡</p>
+            ${r.endPhoto
+              ? `<img src="${r.endPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>`
+              : `<div class="h-28 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-300"><svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function exportPhotosPDF() {
+  const empFilter = document.getElementById('photo-filter-emp').value;
+  const from = document.getElementById('photo-filter-from').value;
+  const to = document.getElementById('photo-filter-to').value;
+  const filtered = records.filter(r => {
+    if (empFilter && r.empId !== empFilter) return false;
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
+    return true;
+  });
+  if (filtered.length === 0) { toast('沒有符合條件的紀錄', false); return; }
+  const empName = empFilter ? getEmpDisplay(getEmpById(empFilter)) : '所有員工';
+  const dateRange = (from || to) ? `${from || ''} ~ ${to || ''}` : '全部日期';
+  const cardsHTML = filtered.map(r => {
+    const emp = getEmpById(r.empId);
+    const isAdj = r.diff > 0;
+    const startImg = r.startPhoto ? `<img src="${r.startPhoto}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;"/>` : `<div style="width:100%;height:160px;background:#F8FAFC;border:2px dashed #CBD5E1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94A3B8;font-size:12px;">無照片</div>`;
+    const endImg = r.endPhoto ? `<img src="${r.endPhoto}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;"/>` : `<div style="width:100%;height:160px;background:#F8FAFC;border:2px dashed #CBD5E1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94A3B8;font-size:12px;">無照片</div>`;
+    return `
+      <div style="border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:20px;page-break-inside:avoid;">
+        <div style="background:linear-gradient(135deg,#EEF2FF,#F8FAFF);padding:14px 16px;border-bottom:1px solid #E2E8F0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div>
+              <div style="font-size:16px;font-weight:700;color:#4F46E5;">${emp ? emp.nickname : '未知'}</div>
+              ${emp && (emp.zhName || emp.enName) ? `<div style="font-size:12px;color:#94A3B8;">${[emp.zhName,emp.enName].filter(Boolean).join(' / ')}</div>` : ''}
+            </div>
+            <div style="background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;font-family:monospace;">${r.jobCode}</div>
+          </div>
+          <div style="display:flex;gap:20px;font-size:12px;color:#64748B;flex-wrap:wrap;">
+            <span>日期：<strong style="color:#1E293B;">${r.date}</strong></span>
+            <span>開工：<strong style="color:#1E293B;font-family:monospace;">${r.startTime}</strong></span>
+            <span>收工：<strong style="color:${isAdj ? '#D97706' : '#059669'};font-family:monospace;">${r.adjEnd}</strong>${isAdj ? ` <span style="background:#FFF7ED;color:#C2410C;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:600;">-${r.diff}m</span>` : ''}</span>
+            <span>結算工時：<strong style="color:#4F46E5;font-family:monospace;">${r.adjHours}h</strong></span>
+            <span>薪酬：<strong style="color:#059669;font-family:monospace;">HK$${r.totalSalary.toFixed(1)}</strong></span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;">
+          <div>
+            <p style="text-align:center;font-size:11px;color:#94A3B8;margin-bottom:6px;font-weight:600;">開工打卡</p>
+            ${startImg}
+          </div>
+          <div>
+            <p style="text-align:center;font-size:11px;color:#94A3B8;margin-bottom:6px;font-weight:600;">收工打卡</p>
+            ${endImg}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"/><title>圖片打卡紀錄 PDF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <style>*{font-family:'Noto Sans TC',sans-serif;margin:0;padding:0;box-sizing:border-box;}body{padding:24px;background:#fff;color:#1E293B;max-width:800px;margin:0 auto;}h1{font-size:20px;font-weight:700;color:#4F46E5;margin-bottom:4px;}p.sub{font-size:12px;color:#94A3B8;margin-bottom:20px;}@media print{body{padding:12px;}}</style>
+    </head><body>
+    <h1>圖片打卡紀錄報告</h1>
+    <p class="sub">員工：${empName} &nbsp;|&nbsp; 日期範圍：${dateRange} &nbsp;|&nbsp; 共 ${filtered.length} 筆紀錄</p>
+    ${cardsHTML}
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
+}
+
+// ---- EXPORT ----
+function getFilteredExport() {
+  const empFilter = document.getElementById('export-emp').value;
+  const from = document.getElementById('export-from').value;
+  const to = document.getElementById('export-to').value;
   return records.filter(r => {
-    if (filterEmp   && r.empId !== filterEmp) return false;
-    if (filterMonth && !r.date.startsWith(filterMonth)) return false;
+    if (empFilter && r.empId !== empFilter) return false;
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
     return true;
   });
 }
 
-function renderRecords() {
-  const tbody   = document.getElementById('records-body');
-  const filtered = [...getFilteredRecords()].sort((a,b)=>b.date.localeCompare(a.date));
-
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="display:block;margin:0 auto 10px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h7"/></svg>
-      尚無符合條件的記錄
-    </div></td></tr>`;
-    return;
-  }
-
+function renderExport() {
+  const filtered = getFilteredExport();
+  const tbody = document.getElementById('export-tbody');
+  const tfoot = document.getElementById('export-tfoot');
+  const wrap = document.getElementById('export-table-wrap');
+  const empty = document.getElementById('export-empty');
+  if (filtered.length === 0) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+  wrap.classList.remove('hidden'); empty.classList.add('hidden');
+  const totalHours = filtered.reduce((s, r) => s + r.adjHours, 0);
+  const totalPay = filtered.reduce((s, r) => s + r.totalSalary, 0);
   tbody.innerHTML = filtered.map(r => {
-    const changed = r.updatedEnd !== r.end;
-    const total = (r.totalPay||0) + Number(r.meal||0);
+    const emp = getEmpById(r.empId);
+    const isAdj = r.diff > 0;
     return `
-    <tr>
-      <td><span class="badge badge-blue">${r.empName}</span></td>
-      <td class="mono">${r.date}</td>
-      <td class="mono" style="color:var(--text2)">${r.so||'--'}</td>
-      <td class="mono">${r.start}</td>
-      <td class="mono" style="color:var(--text2)">${r.end}</td>
-      <td class="mono" style="color:${changed?'var(--yellow)':'var(--green)'}">${r.updatedEnd}</td>
-      <td><span class="badge badge-green">${r.totalHours.toFixed(1)}h</span></td>
-      <td class="mono" style="color:var(--text2)">${r.rate?'$'+r.rate:'--'}</td>
-      <td class="mono" style="color:var(--orange)">${r.totalPay>0?'$'+r.totalPay.toFixed(1):'--'}</td>
-      <td class="mono">$${r.meal}</td>
-      <td class="mono" style="color:var(--yellow);font-weight:600">${total>0?'$'+total.toFixed(1):'--'}</td>
-      <td style="max-width:120px;font-size:0.78rem;color:var(--text2)">${r.remark||'--'}</td>
-      <td>
-        <div class="actions">
-          <button class="btn btn-yellow btn-xs" onclick="openEditModal('${r.id}')">編輯</button>
-          <button class="btn btn-danger btn-xs" onclick="deleteRecord('${r.id}')">刪除</button>
-        </div>
-      </td>
+      <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+        <td class="p-3 text-xs text-slate-400">${r.date}</td>
+        <td class="p-3 font-semibold text-indigo-600">${emp ? emp.nickname : '-'}</td>
+        <td class="p-3 mono text-xs">${r.jobCode}</td>
+        <td class="p-3 mono text-sm">${r.startTime}</td>
+        <td class="p-3 mono text-sm line-through text-slate-400">${r.endTime}</td>
+        <td class="p-3 mono text-sm ${isAdj ? 'text-amber-600' : 'text-emerald-600'} font-semibold">${r.adjEnd}${isAdj ? ` <span class="badge badge-orange">-${r.diff}m</span>` : ''}</td>
+        <td class="p-3 text-xs">${r.includeMeal ? '包括午飯（不扣時）' : '扣除 ' + r.mealDeduct + ' 分鐘'}</td>
+        <td class="p-3 text-right mono font-semibold text-indigo-600">${r.adjHours}h</td>
+        <td class="p-3 text-right mono text-sm">$${r.hourlyRate}</td>
+        <td class="p-3 text-right mono font-bold text-emerald-600">$${r.totalSalary.toFixed(1)}</td>
+      </tr>`;
+  }).join('');
+  tfoot.innerHTML = `
+    <tr class="bg-slate-50 font-semibold border-t-2 border-slate-200">
+      <td colspan="7" class="p-3 text-right text-sm text-slate-600">合計（${filtered.length} 筆）</td>
+      <td class="p-3 text-right mono text-indigo-700">${totalHours}h</td>
+      <td class="p-3"></td>
+      <td class="p-3 text-right mono text-emerald-700 text-base">$${totalPay.toFixed(1)}</td>
     </tr>`;
+}
+
+function exportCSV() {
+  const filtered = getFilteredExport();
+  if (filtered.length === 0) { toast('沒有可匯出的紀錄', false); return; }
+  const header = ['日期','暱稱','工作編號','開工時間','原收工時間','更新收工時間','午飯安排','結算工時(h)','時薪(HKD)','總薪金(HKD)'];
+  const rows = filtered.map(r => {
+    const emp = getEmpById(r.empId);
+    return [r.date, emp ? emp.nickname : '-', r.jobCode, r.startTime, r.endTime, r.adjEnd,
+      r.includeMeal ? '包括午飯不扣時' : `扣除${r.mealDeduct}分鐘`, r.adjHours, r.hourlyRate, r.totalSalary.toFixed(1)];
+  });
+  const csv = '\uFEFF' + [header, ...rows].map(row => row.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = `出勤報告_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('CSV 匯出成功');
+}
+
+function printReport() {
+  const filtered = getFilteredExport();
+  if (filtered.length === 0) { toast('沒有可列印的紀錄', false); return; }
+  const totalHours = filtered.reduce((s,r) => s + r.adjHours, 0);
+  const totalPay = filtered.reduce((s,r) => s + r.totalSalary, 0);
+  const rows = filtered.map(r => {
+    const emp = getEmpById(r.empId);
+    const isAdj = r.diff > 0;
+    return `<tr>
+      <td>${r.date}</td><td><strong>${emp ? emp.nickname : '-'}</strong></td><td>${r.jobCode}</td>
+      <td>${r.startTime}</td><td style="text-decoration:line-through;color:#94A3B8;">${r.endTime}</td>
+      <td style="color:${isAdj ? '#D97706' : '#059669'};font-weight:600;">${r.adjEnd}${isAdj ? ` (-${r.diff}m)` : ''}</td>
+      <td>${r.includeMeal ? '包括午飯' : '扣' + r.mealDeduct + '分'}</td>
+      <td style="text-align:right;font-weight:600;">${r.adjHours}h</td>
+      <td style="text-align:right;">$${r.hourlyRate}</td>
+      <td style="text-align:right;font-weight:700;color:#059669;">$${r.totalSalary.toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"/><title>出勤報告</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <style>*{font-family:'Noto Sans TC',sans-serif;}body{padding:24px;max-width:1000px;margin:0 auto;}h1{font-size:20px;color:#4F46E5;margin-bottom:4px;}p.sub{font-size:12px;color:#94A3B8;margin-bottom:16px;}table{width:100%;border-collapse:collapse;font-size:12px;}th{background:#F8FAFC;padding:8px;border:1px solid #E2E8F0;font-weight:600;color:#64748B;}td{padding:8px;border:1px solid #E2E8F0;}tfoot td{background:#F1F5F9;font-weight:700;}@media print{body{padding:10px;}}</style>
+    </head><body>
+    <h1>出勤報告</h1>
+    <p class="sub">匯出時間：${new Date().toLocaleString('zh-HK')} &nbsp;|&nbsp; 共 ${filtered.length} 筆紀錄</p>
+    <table><thead><tr><th>日期</th><th>暱稱</th><th>工作編號</th><th>開工</th><th>原收工</th><th>更新收工</th><th>午飯</th><th>工時</th><th>時薪</th><th>薪金</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="7" style="text-align:right;">合計</td><td style="text-align:right;">${totalHours}h</td><td></td><td style="text-align:right;color:#059669;">$${totalPay.toFixed(1)}</td></tr></tfoot>
+    </table>
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
+}
+
+// ---- STATS ----
+function renderStats() {
+  document.getElementById('stat-total-records').textContent = records.length;
+  const totalHours = records.reduce((s,r) => s + r.adjHours, 0);
+  const totalPay = records.reduce((s,r) => s + r.totalSalary, 0);
+  document.getElementById('stat-total-hours').innerHTML = `${totalHours} <span class="text-sm font-normal text-slate-500">小時</span>`;
+  document.getElementById('stat-total-pay').textContent = `HK$${totalPay.toFixed(1)}`;
+  const tbody = document.getElementById('stats-tbody');
+  if (employees.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 text-sm">尚未新增員工</td></tr>'; return; }
+  tbody.innerHTML = employees.map(emp => {
+    const empRecs = records.filter(r => r.empId === emp.id);
+    const h = empRecs.reduce((s,r) => s + r.adjHours, 0);
+    const p = empRecs.reduce((s,r) => s + r.totalSalary, 0);
+    return `
+      <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+        <td class="p-3 font-medium">${getEmpDisplay(emp)}</td>
+        <td class="p-3 text-center">${empRecs.length}</td>
+        <td class="p-3 text-right mono font-semibold text-indigo-600">${h} 小時</td>
+        <td class="p-3 text-right mono font-bold text-emerald-600">HK$${p.toFixed(1)}</td>
+      </tr>`;
   }).join('');
 }
 
-function deleteRecord(id) {
-  if (!confirm('確定要刪除此記錄？')) return;
-  records = records.filter(r=>r.id!==id);
-  save();
-  renderRecords();
-  renderSummary();
-  renderEmployeeList();
-  updateBadges();
-  showToast('記錄已刪除');
-}
-
-function clearAllRecords() {
-  if (!confirm('確定要清除全部考勤記錄？此操作無法撤銷。')) return;
-  records = [];
-  save();
-  renderRecords();
-  renderSummary();
-  renderEmployeeList();
-  updateBadges();
-  showToast('已清除全部記錄');
-}
-
-// ══════════════════════════════════════════════════════════════
-// SUMMARY
-// ══════════════════════════════════════════════════════════════
-function renderSummary() {
-  const filtered  = getFilteredRecords();
-  const totalH    = filtered.reduce((s,r)=>s+r.totalHours,0);
-  const totalPay  = filtered.reduce((s,r)=>s+(r.totalPay||0),0);
-  const totalMeal = filtered.reduce((s,r)=>s+Number(r.meal||0),0);
-  const totalAll  = totalPay + totalMeal;
-
-  document.getElementById('summary-grid').innerHTML = `
-    <div class="scard">
-      <div class="sval">${employees.length}</div>
-      <div class="slbl">員工總數</div>
-    </div>
-    <div class="scard green">
-      <div class="sval">${filtered.length}</div>
-      <div class="slbl">考勤記錄</div>
-    </div>
-    <div class="scard purple">
-      <div class="sval">${totalH.toFixed(1)}h</div>
-      <div class="slbl">總工時</div>
-    </div>
-    <div class="scard yellow">
-      <div class="sval">$${totalMeal}</div>
-      <div class="slbl">飯鐘錢合計</div>
-    </div>
-    <div class="scard orange">
-      <div class="sval">$${totalPay.toFixed(0)}</div>
-      <div class="slbl">薪酬合計</div>
-    </div>
-    <div class="scard">
-      <div class="sval" style="color:var(--yellow)">$${totalAll.toFixed(0)}</div>
-      <div class="slbl">總支出</div>
-    </div>
-  `;
-
-  // per-employee breakdown
-  if (employees.length) {
-    const rows = employees.map(emp => {
-      const er = filtered.filter(r=>r.empId===emp.id);
-      if (!er.length) return '';
-      const h = er.reduce((s,r)=>s+r.totalHours,0);
-      const p = er.reduce((s,r)=>s+(r.totalPay||0),0);
-      const m = er.reduce((s,r)=>s+Number(r.meal||0),0);
-      return `
-      <div class="breakdown-row">
-        <span class="bd-name"><span class="badge badge-blue" style="margin-right:6px">${emp.name}</span></span>
-        <span class="bd-val" style="color:var(--accent)">${er.length} 筆</span>
-        <span class="bd-val" style="color:var(--green)">${h.toFixed(1)}h</span>
-        <span class="bd-val" style="color:var(--orange)">$${p.toFixed(0)}</span>
-        <span class="bd-val" style="color:var(--yellow)">+$${m} 飯</span>
-      </div>`;
-    }).filter(Boolean).join('');
-
-    document.getElementById('breakdown-section').innerHTML = rows ? `
-      <div class="card" style="margin-top:0">
-        <div class="card-title"><div class="card-title-bar"></div>員工分項統計</div>
-        ${rows}
-      </div>` : '';
-  } else {
-    document.getElementById('breakdown-section').innerHTML = '';
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// EXPORT CSV
-// ══════════════════════════════════════════════════════════════
-function exportCSV() {
-  const filtered = [...getFilteredRecords()].sort((a,b)=>b.date.localeCompare(a.date));
-  if (!filtered.length) { showToast('沒有可匯出的記錄','warn'); return; }
-
-  const header = ['員工','日期','SO號碼','開始','原始結束','更新結束','時數','時薪','薪酬','飯鐘錢','合計','備注'];
-  const rows = filtered.map(r => [
-    r.empName, r.date, r.so||'',
-    r.start, r.end, r.updatedEnd,
-    r.totalHours.toFixed(1),
-    r.rate||'',
-    (r.totalPay||0).toFixed(2),
-    r.meal,
-    ((r.totalPay||0)+Number(r.meal||0)).toFixed(2),
-    r.remark||''
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
-
-  const csv = '\uFEFF' + [header.join(','), ...rows].join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'attendance_' + toLocalDateStr(new Date()) + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('CSV 已匯出');
-}
+// ---- INIT ----
+switchTab('attendance');
 </script>
 </body>
 </html>
