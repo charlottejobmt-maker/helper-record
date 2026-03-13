@@ -1,980 +1,384 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Helper 出勤紀錄系統</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-<style>
-  * { font-family: 'Noto Sans TC', sans-serif; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-  :root {
-    --accent: #4F46E5;
-    --accent-light: #EEF2FF;
-    --accent-dark: #3730A3;
-    --success: #059669;
-    --warning: #D97706;
-    --danger: #DC2626;
-  }
-  .tab-btn { transition: all 0.2s; }
-  .tab-btn.active { background: var(--accent); color: #fff; }
-  .tab-btn:not(.active):hover { background: #E0E7FF; color: var(--accent); }
-  input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
-  .card { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); border:1px solid #F1F5F9; }
-  .photo-slot { border:2px dashed #CBD5E1; border-radius:8px; background:#F8FAFC; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:120px; cursor:pointer; transition:all 0.2s; }
-  .photo-slot:hover { border-color: var(--accent); background: var(--accent-light); }
-  .badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600; }
-  .badge-orange { background:#FFF7ED; color:#C2410C; }
-  .badge-green { background:#ECFDF5; color:#065F46; }
-  .badge-blue { background:#EFF6FF; color:#1D4ED8; }
-  .stat-card { background:#fff; border-radius:12px; padding:20px 24px; box-shadow:0 1px 4px rgba(0,0,0,0.08); border:1px solid #F1F5F9; display:flex; align-items:center; gap:16px; }
-  .stat-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
-  table thead th { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#64748B; }
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
-  .modal-box { background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.2); width:100%; max-width:680px; max-height:90vh; overflow-y:auto; }
-  input, select, textarea { outline:none; transition: box-shadow 0.15s; }
-  input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(79,70,229,0.15); border-color: #A5B4FC !important; }
-  .btn-primary { background:var(--accent); color:#fff; padding:9px 20px; border-radius:8px; font-weight:600; font-size:14px; cursor:pointer; transition:all 0.15s; border:none; }
-  .btn-primary:hover { background:var(--accent-dark); }
-  .btn-ghost { background:transparent; color:#64748B; padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer; border:1px solid #E2E8F0; transition:all 0.15s; }
-  .btn-ghost:hover { background:#F8FAFC; color:#1E293B; }
-  .btn-danger { background:#FEF2F2; color:var(--danger); padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; border:1px solid #FECACA; transition:all 0.15s; }
-  .btn-danger:hover { background:#FEE2E2; }
-  ::-webkit-scrollbar { width:6px; height:6px; }
-  ::-webkit-scrollbar-track { background:#F1F5F9; border-radius:3px; }
-  ::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:3px; }
-  .photo-preview-img { width:100%; height:130px; object-fit:cover; border-radius:6px; cursor:pointer; transition:opacity 0.15s; }
-  .photo-preview-img:hover { opacity:0.85; }
-  .live-calc { background: linear-gradient(135deg, #EEF2FF, #F0FDF4); border:1px solid #C7D2FE; border-radius:10px; padding:14px; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-  .fade-in { animation: fadeIn 0.25s ease; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雲端 Helper 出勤紀錄系統</title>
+    <!-- 引入 Bootstrap 5 (UI 框架) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .photo-preview { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; border: 2px dashed #ccc; }
+        .print-only { display: none; }
+        /* 列印與 PDF 匯出專用樣式 */
+        @media print {
+            body { background-color: white; }
+            .no-print { display: none !important; }
+            .print-only { display: block; }
+            .card { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body>
 
-<!-- HEADER -->
-<header style="background:linear-gradient(135deg,#4F46E5,#6366F1);" class="text-white shadow-lg">
-  <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </div>
-      <div>
-        <h1 class="text-lg font-bold leading-tight">Helper 出勤紀錄系統</h1>
-        <p class="text-xs text-indigo-200">本地存儲版本</p>
-      </div>
-    </div>
-    <nav class="flex gap-1 bg-white/10 p-1 rounded-xl flex-wrap">
-      <button onclick="switchTab('employees')" id="tab-employees" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">員工管理</button>
-      <button onclick="switchTab('attendance')" id="tab-attendance" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">打卡出勤</button>
-      <button onclick="switchTab('photos')" id="tab-photos" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">圖片紀錄</button>
-      <button onclick="switchTab('export')" id="tab-export" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">匯出報告</button>
-      <button onclick="switchTab('stats')" id="tab-stats" class="tab-btn px-3 py-2 rounded-lg text-sm font-medium text-white/80">統計總覽</button>
-    </nav>
-  </div>
-</header>
+<div class="container mt-4 no-print">
+    <h2 class="text-center mb-4 text-primary">☁️ Helper 出勤紀錄系統 (雲端版)</h2>
+    
+    <!-- 導航列 -->
+    <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-attendance">打卡出勤</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-employees">員工管理</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-photos">圖片紀錄 (匯出PDF)</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-reports">匯出報告 (CSV)</button></li>
+    </ul>
 
-<main class="max-w-7xl mx-auto px-4 py-6">
+    <div class="tab-content">
+        <!-- 【打卡出勤分頁】 -->
+        <div class="tab-pane fade show active" id="tab-attendance">
+            <div class="card card-body">
+                <h4>新增出勤紀錄</h4>
+                <form id="attendanceForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>選擇員工</label>
+                            <select id="empSelect" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label>日期</label>
+                            <input type="date" id="workDate" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>開工時間</label>
+                            <input type="time" id="startTime" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label>收工時間</label>
+                            <input type="time" id="endTime" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="includeLunch">
+                        <label class="form-check-label" for="includeLunch">包含午飯時間 (扣除1小時)</label>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label>開工打卡照片</label>
+                            <input type="file" id="startPhoto" class="form-control mb-2" accept="image/*" required>
+                            <img id="startPhotoPreview" class="photo-preview" src="" style="display:none;">
+                        </div>
+                        <div class="col-md-6">
+                            <label>收工打卡照片</label>
+                            <input type="file" id="endPhoto" class="form-control mb-2" accept="image/*" required>
+                            <img id="endPhotoPreview" class="photo-preview" src="" style="display:none;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">儲存紀錄並上傳圖片 (請稍候)</button>
+                </form>
+            </div>
+        </div>
 
-  <!-- ====== 員工管理 ====== -->
-  <div id="page-employees" class="hidden fade-in">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="card p-5 h-fit">
-        <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
-          <span class="w-7 h-7 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </span>
-          新增員工
-        </h2>
-        <form onsubmit="addEmployee(event)" class="space-y-3">
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">暱稱 <span class="text-red-500">*</span></label>
-            <input id="emp-nickname" type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="例如：阿明、Mary"/>
-          </div>
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">中文姓名 <span class="text-slate-400">(選填)</span></label>
-            <input id="emp-zhname" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="例如：陳大明"/>
-          </div>
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">英文姓名 <span class="text-slate-400">(選填)</span></label>
-            <input id="emp-enname" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="例如：Chan Tai Ming"/>
-          </div>
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">備注 <span class="text-slate-400">(選填)</span></label>
-            <textarea id="emp-remark" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none" placeholder="備注資料..."></textarea>
-          </div>
-          <button type="submit" class="btn-primary w-full text-center">儲存員工</button>
-        </form>
-      </div>
-      <div class="card p-5 md:col-span-2">
-        <h2 class="font-semibold text-base mb-4" id="emp-count-title">員工列表</h2>
-        <div class="overflow-x-auto" id="emp-table-wrap">
-          <div class="text-center py-10 text-slate-400 text-sm" id="emp-empty">尚未新增任何員工</div>
-          <table class="w-full text-left border-collapse hidden" id="emp-table">
-            <thead>
-              <tr class="bg-slate-50">
-                <th class="p-3 border-b border-slate-100">暱稱</th>
-                <th class="p-3 border-b border-slate-100">中文姓名</th>
-                <th class="p-3 border-b border-slate-100">英文姓名</th>
-                <th class="p-3 border-b border-slate-100">備注</th>
-                <th class="p-3 border-b border-slate-100 w-20 text-center">操作</th>
-              </tr>
-            </thead>
-            <tbody id="emp-tbody"></tbody>
-          </table>
+        <!-- 【員工管理分頁】 -->
+        <div class="tab-pane fade" id="tab-employees">
+            <div class="card card-body mb-4">
+                <h4>新增員工</h4>
+                <form id="employeeForm" class="row g-3">
+                    <div class="col-md-3"><input type="text" id="empNickname" class="form-control" placeholder="暱稱 (必填)" required></div>
+                    <div class="col-md-3"><input type="text" id="empId" class="form-control" placeholder="工作編號 (必填)" required></div>
+                    <div class="col-md-2"><input type="number" id="empWage" class="form-control" placeholder="時薪 ($)" required></div>
+                    <div class="col-md-2"><input type="text" id="empName" class="form-control" placeholder="全名 (選填)"></div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-success w-100">新增</button></div>
+                </form>
+            </div>
+            <ul class="list-group" id="employeeList"></ul>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ====== 打卡出勤 ====== -->
-  <div id="page-attendance" class="hidden fade-in">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="card p-5 lg:col-span-1 h-fit">
-        <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
-          <span class="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          </span>
-          新增出勤紀錄
-        </h2>
-        <form onsubmit="addRecord(event)" class="space-y-3">
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">員工 <span class="text-red-500">*</span></label>
-            <select id="rec-emp" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
-              <option value="">-- 請選擇員工 --</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">工作編號 <span class="text-red-500">*</span></label>
-            <input id="rec-job" type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mono" placeholder="例如：JOB-20240101"/>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-600 text-slate-600 mb-1">開工時間 <span class="text-red-500">*</span></label>
-              <input id="rec-start" type="time" required onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
+        <!-- 【圖片紀錄與 PDF 匯出分頁】 -->
+        <div class="tab-pane fade" id="tab-photos">
+            <div class="card card-body mb-3">
+                <div class="row">
+                    <div class="col-md-4"><label>員工篩選</label><select id="filterEmpPdf" class="form-select"><option value="ALL">全部員工</option></select></div>
+                    <div class="col-md-3"><label>開始日期</label><input type="date" id="filterStartPdf" class="form-control"></div>
+                    <div class="col-md-3"><label>結束日期</label><input type="date" id="filterEndPdf" class="form-control"></div>
+                    <div class="col-md-2 d-flex align-items-end"><button class="btn btn-danger w-100" onclick="window.print()">列印 / 匯出 PDF</button></div>
+                </div>
             </div>
-            <div>
-              <label class="block text-xs font-600 text-slate-600 mb-1">收工時間 <span class="text-red-500">*</span></label>
-              <input id="rec-end" type="time" required onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
-            </div>
-          </div>
-          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-600 text-slate-700">包括午飯時間（不扣薪）</label>
-              <input type="checkbox" id="rec-meal-check" checked onchange="toggleMeal()" class="w-4 h-4 accent-indigo-600 cursor-pointer"/>
-            </div>
-            <div id="meal-deduct-row" class="hidden">
-              <label class="block text-xs text-slate-500 mb-1">扣除時間</label>
-              <select id="rec-meal-mins" onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
-                <option value="30">30 分鐘</option>
-                <option value="45">45 分鐘</option>
-                <option value="60">1 小時 (60 分鐘)</option>
-                <option value="90">1.5 小時 (90 分鐘)</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-600 text-slate-600 mb-1">時薪 (HKD) <span class="text-red-500">*</span></label>
-            <input id="rec-rate" type="number" min="0" value="60" required onchange="liveCalc()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mono"/>
-          </div>
-          <!-- 照片上傳 -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-600 text-slate-600 mb-1">開工打卡照片</label>
-              <label class="photo-slot p-3" id="start-photo-label">
-                <svg width="22" height="22" fill="none" stroke="#94A3B8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span id="start-photo-label-text" class="text-xs text-slate-400 mt-1">選擇照片</span>
-                <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(event,'start')" id="start-photo-input"/>
-              </label>
-              <img id="start-photo-preview" class="photo-preview-img mt-2 hidden" onclick="previewPhoto(this.src)"/>
-            </div>
-            <div>
-              <label class="block text-xs font-600 text-slate-600 mb-1">收工打卡照片</label>
-              <label class="photo-slot p-3" id="end-photo-label">
-                <svg width="22" height="22" fill="none" stroke="#94A3B8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <span id="end-photo-label-text" class="text-xs text-slate-400 mt-1">選擇照片</span>
-                <input type="file" accept="image/*" class="hidden" onchange="handlePhoto(event,'end')" id="end-photo-input"/>
-              </label>
-              <img id="end-photo-preview" class="photo-preview-img mt-2 hidden" onclick="previewPhoto(this.src)"/>
-            </div>
-          </div>
-          <!-- 即時計算 -->
-          <div id="live-calc-box" class="live-calc hidden">
-            <div class="flex justify-between text-xs text-slate-500 mb-2">
-              <span>原始工時</span><span id="lc-raw" class="mono font-semibold">-</span>
-            </div>
-            <div class="flex justify-between text-xs mb-1">
-              <span class="text-slate-600 font-medium">結算工時 (0.5h 倍數)</span>
-              <span id="lc-adjusted" class="mono font-bold text-indigo-600 text-sm">-</span>
-            </div>
-            <div id="lc-adjust-note" class="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1 mb-2 hidden">
-              收工時間將調整為：<strong id="lc-adj-end" class="mono"></strong>（提前 <span id="lc-diff"></span> 分鐘）
-            </div>
-            <div class="flex justify-between items-center pt-2 border-t border-indigo-200">
-              <span class="text-xs text-slate-600 font-medium">預計薪酬</span>
-              <span id="lc-salary" class="font-bold text-emerald-600 text-base mono">-</span>
-            </div>
-          </div>
-          <button type="submit" class="btn-primary w-full">儲存紀錄</button>
-        </form>
-      </div>
+            <div id="photoRecordsContainer" class="row"></div>
+        </div>
 
-      <!-- 紀錄列表 -->
-      <div class="card p-5 lg:col-span-2">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-          <h2 class="font-semibold text-base" id="rec-count-title">出勤紀錄</h2>
-          <div class="relative w-full sm:w-64">
-            <svg class="absolute left-3 top-2.5 text-slate-400 w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="rec-search" onkeyup="renderRecords()" placeholder="搜尋員工、工作編號..." class="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm"/>
-          </div>
+        <!-- 【匯出報告 (CSV) 分頁】 -->
+        <div class="tab-pane fade" id="tab-reports">
+            <div class="card card-body mb-3">
+                <div class="row">
+                    <div class="col-md-10"><label>點擊右側按鈕下載所有紀錄的 Excel(CSV) 檔案</label></div>
+                    <div class="col-md-2"><button class="btn btn-success w-100" onclick="exportToCSV()">匯出 CSV</button></div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead><tr><th>日期</th><th>暱稱</th><th>編號</th><th>上班</th><th>下班(更新)</th><th>工時</th><th>總薪金</th></tr></thead>
+                    <tbody id="reportTableBody"></tbody>
+                </table>
+            </div>
         </div>
-        <div id="rec-empty" class="text-center py-12 text-slate-400 text-sm">尚未新增任何出勤紀錄</div>
-        <div class="overflow-x-auto hidden" id="rec-table-wrap">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr class="bg-slate-50">
-                <th class="p-3 border-b border-slate-100">日期</th>
-                <th class="p-3 border-b border-slate-100">員工</th>
-                <th class="p-3 border-b border-slate-100">工作編號</th>
-                <th class="p-3 border-b border-slate-100">時間</th>
-                <th class="p-3 border-b border-slate-100 text-right">工時</th>
-                <th class="p-3 border-b border-slate-100 text-right">薪酬</th>
-                <th class="p-3 border-b border-slate-100 text-center w-20">操作</th>
-              </tr>
-            </thead>
-            <tbody id="rec-tbody"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
-  </div>
-
-  <!-- ====== 圖片紀錄 ====== -->
-  <div id="page-photos" class="hidden fade-in">
-    <div class="card p-4 mb-5">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-        <div>
-          <label class="block text-xs font-600 text-slate-600 mb-1">員工篩選</label>
-          <select id="photo-filter-emp" onchange="renderPhotos()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
-            <option value="">所有員工</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-600 text-slate-600 mb-1">開始日期</label>
-          <input type="date" id="photo-filter-from" onchange="renderPhotos()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
-        </div>
-        <div>
-          <label class="block text-xs font-600 text-slate-600 mb-1">結束日期</label>
-          <input type="date" id="photo-filter-to" onchange="renderPhotos()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
-        </div>
-        <div>
-          <button onclick="exportPhotosPDF()" class="btn-primary w-full flex items-center justify-center gap-2">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            匯出所選為 PDF
-          </button>
-        </div>
-      </div>
-    </div>
-    <div id="photo-empty" class="text-center py-16 text-slate-400 text-sm card">
-      <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      沒有符合條件的圖片紀錄
-    </div>
-    <div id="photo-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 hidden"></div>
-  </div>
-
-  <!-- ====== 匯出報告 ====== -->
-  <div id="page-export" class="hidden fade-in">
-    <div class="card p-5 mb-5">
-      <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
-        <span class="w-7 h-7 bg-sky-100 text-sky-600 rounded-lg flex items-center justify-center">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        </span>
-        篩選條件
-      </h2>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-xs font-600 text-slate-600 mb-1">員工</label>
-          <select id="export-emp" onchange="renderExport()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
-            <option value="">所有員工</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-600 text-slate-600 mb-1">開始日期</label>
-          <input type="date" id="export-from" onchange="renderExport()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
-        </div>
-        <div>
-          <label class="block text-xs font-600 text-slate-600 mb-1">結束日期</label>
-          <input type="date" id="export-to" onchange="renderExport()" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"/>
-        </div>
-      </div>
-      <div class="flex gap-3 mt-4">
-        <button onclick="exportCSV()" class="btn-primary flex items-center gap-2">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          匯出 CSV
-        </button>
-        <button onclick="printReport()" class="btn-ghost flex items-center gap-2">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          列印 / PDF
-        </button>
-      </div>
-    </div>
-    <div class="card p-5">
-      <div id="export-empty" class="text-center py-10 text-slate-400 text-sm">無符合條件的紀錄</div>
-      <div class="overflow-x-auto hidden" id="export-table-wrap">
-        <table class="w-full text-left border-collapse text-sm" id="export-table">
-          <thead>
-            <tr class="bg-slate-50">
-              <th class="p-3 border-b border-slate-100">日期</th>
-              <th class="p-3 border-b border-slate-100">暱稱</th>
-              <th class="p-3 border-b border-slate-100">工作編號</th>
-              <th class="p-3 border-b border-slate-100">開工時間</th>
-              <th class="p-3 border-b border-slate-100">原收工時間</th>
-              <th class="p-3 border-b border-slate-100">更新收工時間</th>
-              <th class="p-3 border-b border-slate-100">午飯安排</th>
-              <th class="p-3 border-b border-slate-100 text-right">結算工時</th>
-              <th class="p-3 border-b border-slate-100 text-right">時薪</th>
-              <th class="p-3 border-b border-slate-100 text-right">總薪金</th>
-            </tr>
-          </thead>
-          <tbody id="export-tbody"></tbody>
-          <tfoot id="export-tfoot"></tfoot>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ====== 統計總覽 ====== -->
-  <div id="page-stats" class="hidden fade-in">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <div class="stat-card">
-        <div class="stat-icon bg-blue-50 text-blue-600">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 mb-0.5">總出勤次數</p>
-          <p class="text-2xl font-bold text-slate-800 mono" id="stat-total-records">0</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon bg-indigo-50 text-indigo-600">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 mb-0.5">總結算工時</p>
-          <p class="text-2xl font-bold text-slate-800 mono" id="stat-total-hours">0 <span class="text-sm font-normal text-slate-500">小時</span></p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon bg-emerald-50 text-emerald-600">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 mb-0.5">總應付薪酬</p>
-          <p class="text-2xl font-bold text-emerald-600 mono" id="stat-total-pay">HK$0</p>
-        </div>
-      </div>
-    </div>
-    <div class="card p-5">
-      <h2 class="font-semibold text-base mb-4">員工結算明細</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-sm">
-          <thead>
-            <tr class="bg-slate-50">
-              <th class="p-3 border-b border-slate-100">員工</th>
-              <th class="p-3 border-b border-slate-100 text-center">出勤次數</th>
-              <th class="p-3 border-b border-slate-100 text-right">總結算工時</th>
-              <th class="p-3 border-b border-slate-100 text-right">應付薪酬</th>
-            </tr>
-          </thead>
-          <tbody id="stats-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<!-- 紀錄詳情 Modal -->
-<div id="record-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <div class="sticky top-0 bg-white flex justify-between items-center p-4 border-b">
-      <h3 class="font-bold text-base">出勤紀錄詳情</h3>
-      <button onclick="closeModal('record-modal')" class="text-slate-400 hover:text-slate-700">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div id="record-modal-content" class="p-5"></div>
-  </div>
 </div>
 
-<!-- 照片放大 Modal -->
-<div id="photo-modal" class="modal-overlay hidden" onclick="closeModal('photo-modal')">
-  <img id="photo-modal-img" src="" alt="放大照片" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"/>
+<!-- 列印專用標題 (只在列印或存 PDF 時顯示) -->
+<div class="print-only container mt-4">
+    <h2 class="text-center mb-4">員工打卡圖片紀錄報告</h2>
+    <div id="printPhotoRecords" class="row"></div>
 </div>
 
-<!-- Toast -->
-<div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium hidden z-50 flex items-center gap-2">
-  <span id="toast-msg"></span>
-</div>
+<!-- Firebase 核心 SDK (Module 語法) -->
+<script type="module">
+    // 1. 引入 Firebase 模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
-<script>
-// ---- DATA ----
-let employees = JSON.parse(localStorage.getItem('hk_employees') || '[]');
-let records = JSON.parse(localStorage.getItem('hk_records') || '[]');
-let startPhotoData = null;
-let endPhotoData = null;
+    // ⚠️ 請在這裡貼上您在 Firebase Console 獲得的 firebaseConfig
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7VKVU108qaXHmh8IH3QgxuCupPoA1VB0",
+       authDomain: "helper-attendance.firebaseapp.com",
+       projectId: "helper-attendance",
+      storageBucket: "helper-attendance.firebasestorage.app",
+     messagingSenderId: "873836158349",
+     appId: "1:873836158349:web:2003832888f09d9651f1c4",
+    measurementId: "G-0WY1SZ3DG1"
+    };
 
-function save() {
-  localStorage.setItem('hk_employees', JSON.stringify(employees));
-  localStorage.setItem('hk_records', JSON.stringify(records));
-}
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-// ---- UTILS ----
-function getEmpById(id) { return employees.find(e => e.id === id); }
+    let employees = [];
+    let records = [];
 
-function getEmpDisplay(emp) {
-  if (!emp) return '未知員工';
-  const names = [emp.zhName, emp.enName].filter(Boolean).join(' / ');
-  return emp.nickname + (names ? ` (${names})` : '');
-}
-
-function calcHours(start, end, deductMins) {
-  if (!start || !end) return null;
-  const s = new Date('2000-01-01T' + start);
-  let e = new Date('2000-01-01T' + end);
-  if (e <= s) e.setDate(e.getDate() + 1);
-  let mins = Math.floor((e - s) / 60000) - parseInt(deductMins || 0);
-  if (mins < 0) mins = 0;
-  const remainder = mins % 30;
-  const adjMins = mins - remainder;
-  const adjE = new Date(e.getTime() - remainder * 60000);
-  return {
-    rawHours: (mins / 60).toFixed(2),
-    adjHours: adjMins / 60,
-    adjEnd: adjE.getHours().toString().padStart(2,'0') + ':' + adjE.getMinutes().toString().padStart(2,'0'),
-    diff: remainder
-  };
-}
-
-function toast(msg, success = true) {
-  const el = document.getElementById('toast');
-  const msgEl = document.getElementById('toast-msg');
-  msgEl.textContent = msg;
-  el.style.background = success ? '#1E293B' : '#DC2626';
-  el.classList.remove('hidden');
-  setTimeout(() => el.classList.add('hidden'), 2500);
-}
-
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-function previewPhoto(src) {
-  document.getElementById('photo-modal-img').src = src;
-  document.getElementById('photo-modal').classList.remove('hidden');
-}
-
-// ---- TAB ----
-function switchTab(tab) {
-  ['employees','attendance','photos','export','stats'].forEach(t => {
-    document.getElementById('page-' + t).classList.add('hidden');
-    document.getElementById('tab-' + t).classList.remove('active');
-  });
-  document.getElementById('page-' + tab).classList.remove('hidden');
-  document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'attendance') { populateEmpSelects(); renderRecords(); }
-  if (tab === 'employees') renderEmployees();
-  if (tab === 'stats') renderStats();
-  if (tab === 'export') { populateEmpSelects(); renderExport(); }
-  if (tab === 'photos') { populateEmpSelects(); renderPhotos(); }
-}
-
-// ---- EMPLOYEES ----
-function addEmployee(e) {
-  e.preventDefault();
-  const nickname = document.getElementById('emp-nickname').value.trim();
-  if (!nickname) { toast('請填寫暱稱', false); return; }
-  employees.push({
-    id: Date.now().toString(),
-    nickname,
-    zhName: document.getElementById('emp-zhname').value.trim(),
-    enName: document.getElementById('emp-enname').value.trim(),
-    remark: document.getElementById('emp-remark').value.trim()
-  });
-  save();
-  renderEmployees();
-  ['emp-nickname','emp-zhname','emp-enname','emp-remark'].forEach(id => document.getElementById(id).value = '');
-  toast('員工已新增');
-}
-
-function deleteEmployee(id) {
-  if (!confirm('確定刪除此員工？相關出勤紀錄將保留。')) return;
-  employees = employees.filter(e => e.id !== id);
-  save();
-  renderEmployees();
-  toast('員工已刪除');
-}
-
-function renderEmployees() {
-  const tbody = document.getElementById('emp-tbody');
-  const table = document.getElementById('emp-table');
-  const empty = document.getElementById('emp-empty');
-  document.getElementById('emp-count-title').textContent = `員工列表 (${employees.length})`;
-  if (employees.length === 0) { table.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-  table.classList.remove('hidden'); empty.classList.add('hidden');
-  tbody.innerHTML = employees.map(emp => `
-    <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-      <td class="p-3 font-semibold text-indigo-600">${emp.nickname}</td>
-      <td class="p-3 text-sm">${emp.zhName || '<span class="text-slate-300">-</span>'}</td>
-      <td class="p-3 text-sm">${emp.enName || '<span class="text-slate-300">-</span>'}</td>
-      <td class="p-3 text-xs text-slate-500">${emp.remark || '<span class="text-slate-300">-</span>'}</td>
-      <td class="p-3 text-center"><button onclick="deleteEmployee('${emp.id}')" class="btn-danger">刪除</button></td>
-    </tr>
-  `).join('');
-}
-
-// ---- POPULATE SELECTS ----
-function populateEmpSelects() {
-  const opts = '<option value="">所有員工</option>' + employees.map(e => `<option value="${e.id}">${getEmpDisplay(e)}</option>`).join('');
-  const recEmp = document.getElementById('rec-emp');
-  if (recEmp) recEmp.innerHTML = '<option value="">-- 請選擇員工 --</option>' + employees.map(e => `<option value="${e.id}">${getEmpDisplay(e)}</option>`).join('');
-  ['export-emp','photo-filter-emp'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = opts; });
-}
-
-// ---- ATTENDANCE ----
-function toggleMeal() {
-  const checked = document.getElementById('rec-meal-check').checked;
-  document.getElementById('meal-deduct-row').classList.toggle('hidden', checked);
-  liveCalc();
-}
-
-function handlePhoto(e, type) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    if (type === 'start') {
-      startPhotoData = reader.result;
-      const img = document.getElementById('start-photo-preview');
-      img.src = reader.result; img.classList.remove('hidden');
-      document.getElementById('start-photo-label-text').textContent = '已選擇';
-    } else {
-      endPhotoData = reader.result;
-      const img = document.getElementById('end-photo-preview');
-      img.src = reader.result; img.classList.remove('hidden');
-      document.getElementById('end-photo-label-text').textContent = '已選擇';
+    // --- 輔助函數：計算工時 (0.5小時倍數調整) ---
+    function calculateHours(start, end, lunch) {
+        let [sH, sM] = start.split(':').map(Number);
+        let [eH, eM] = end.split(':').map(Number);
+        
+        let endMins = eH * 60 + eM;
+        let adjustedEndMins = Math.floor(endMins / 30) * 30; // 往前調整至最近的 30 分鐘
+        
+        let startMins = sH * 60 + sM;
+        let diff = (adjustedEndMins - startMins) / 60;
+        if (lunch) diff -= 1;
+        
+        let adjustedEndStr = `${String(Math.floor(adjustedEndMins/60)).padStart(2,'0')}:${String(adjustedEndMins%60).padStart(2,'0')}`;
+        return { hours: Math.max(0, diff), adjustedEnd: adjustedEndStr };
     }
-  };
-  reader.readAsDataURL(file);
-}
 
-function liveCalc() {
-  const start = document.getElementById('rec-start').value;
-  const end = document.getElementById('rec-end').value;
-  const includeMeal = document.getElementById('rec-meal-check').checked;
-  const deduct = includeMeal ? 0 : document.getElementById('rec-meal-mins').value;
-  const rate = parseFloat(document.getElementById('rec-rate').value) || 0;
-  const box = document.getElementById('live-calc-box');
-  if (!start || !end) { box.classList.add('hidden'); return; }
-  const c = calcHours(start, end, deduct);
-  if (!c) { box.classList.add('hidden'); return; }
-  box.classList.remove('hidden');
-  document.getElementById('lc-raw').textContent = c.rawHours + ' 小時';
-  document.getElementById('lc-adjusted').textContent = c.adjHours + ' 小時';
-  document.getElementById('lc-salary').textContent = 'HK$ ' + (c.adjHours * rate).toFixed(1);
-  const note = document.getElementById('lc-adjust-note');
-  if (c.diff > 0) {
-    note.classList.remove('hidden');
-    document.getElementById('lc-adj-end').textContent = c.adjEnd;
-    document.getElementById('lc-diff').textContent = c.diff;
-  } else {
-    note.classList.add('hidden');
-  }
-}
+    // --- 員工管理功能 ---
+    document.getElementById('employeeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const emp = {
+            nickname: document.getElementById('empNickname').value,
+            empId: document.getElementById('empId').value,
+            wage: Number(document.getElementById('empWage').value),
+            name: document.getElementById('empName').value
+        };
+        await addDoc(collection(db, "employees"), emp);
+        document.getElementById('employeeForm').reset();
+        alert('員工新增成功！');
+        loadEmployees();
+    });
 
-function addRecord(e) {
-  e.preventDefault();
-  const empId = document.getElementById('rec-emp').value;
-  const jobCode = document.getElementById('rec-job').value.trim();
-  const start = document.getElementById('rec-start').value;
-  const end = document.getElementById('rec-end').value;
-  const includeMeal = document.getElementById('rec-meal-check').checked;
-  const deduct = includeMeal ? 0 : document.getElementById('rec-meal-mins').value;
-  const rate = parseFloat(document.getElementById('rec-rate').value) || 0;
-  if (!empId || !jobCode || !start || !end) { toast('請填寫所有必填欄位', false); return; }
-  const c = calcHours(start, end, deduct);
-  if (!c) { toast('時間計算錯誤', false); return; }
-  records.unshift({
-    id: Date.now().toString(),
-    date: new Date().toISOString().split('T')[0],
-    empId, jobCode, startTime: start, endTime: end,
-    includeMeal, mealDeduct: deduct,
-    hourlyRate: rate,
-    rawHours: parseFloat(c.rawHours),
-    adjHours: c.adjHours,
-    adjEnd: c.adjEnd,
-    diff: c.diff,
-    totalSalary: c.adjHours * rate,
-    startPhoto: startPhotoData,
-    endPhoto: endPhotoData
-  });
-  save();
-  renderRecords();
-  // Reset
-  document.getElementById('rec-emp').value = '';
-  document.getElementById('rec-job').value = '';
-  document.getElementById('rec-start').value = '';
-  document.getElementById('rec-end').value = '';
-  document.getElementById('rec-rate').value = '60';
-  document.getElementById('rec-meal-check').checked = true;
-  document.getElementById('meal-deduct-row').classList.add('hidden');
-  document.getElementById('live-calc-box').classList.add('hidden');
-  document.getElementById('start-photo-preview').classList.add('hidden');
-  document.getElementById('end-photo-preview').classList.add('hidden');
-  document.getElementById('start-photo-label-text').textContent = '選擇照片';
-  document.getElementById('end-photo-label-text').textContent = '選擇照片';
-  startPhotoData = null; endPhotoData = null;
-  toast('出勤紀錄已儲存');
-}
+    async function loadEmployees() {
+        const querySnapshot = await getDocs(collection(db, "employees"));
+        employees = [];
+        const list = document.getElementById('employeeList');
+        const select = document.getElementById('empSelect');
+        const filterPdf = document.getElementById('filterEmpPdf');
+        list.innerHTML = ''; select.innerHTML = ''; filterPdf.innerHTML = '<option value="ALL">全部員工</option>';
 
-function deleteRecord(id) {
-  if (!confirm('確定刪除此紀錄？')) return;
-  records = records.filter(r => r.id !== id);
-  save();
-  renderRecords();
-  closeModal('record-modal');
-  toast('紀錄已刪除');
-}
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            data.uid = docSnap.id;
+            employees.push(data);
+            
+            list.innerHTML += `<li class="list-group-item d-flex justify-content-between">
+                <span>[${data.empId}] ${data.nickname} - 時薪 $${data.wage}</span>
+                <button class="btn btn-sm btn-danger" onclick="window.deleteEmp('${data.uid}')">刪除</button>
+            </li>`;
+            
+            let opt = `<option value="${data.empId}">${data.nickname} (${data.empId})</option>`;
+            select.innerHTML += opt;
+            filterPdf.innerHTML += opt;
+        });
+    }
+    
+    // 將刪除功能掛載到全域
+    window.deleteEmp = async (uid) => {
+        if(confirm('確定要刪除嗎？')) {
+            await deleteDoc(doc(db, "employees", uid));
+            loadEmployees();
+        }
+    }
 
-function openRecordModal(id) {
-  const r = records.find(x => x.id === id);
-  if (!r) return;
-  const emp = getEmpById(r.empId);
-  const isAdj = r.diff > 0;
-  document.getElementById('record-modal-content').innerHTML = `
-    <div class="space-y-5">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-        <div class="col-span-2">
-          <p class="text-xs text-slate-400 mb-0.5">員工</p>
-          <p class="font-semibold text-base">${getEmpDisplay(emp)}</p>
-        </div>
-        <div><p class="text-xs text-slate-400 mb-0.5">工作編號</p><p class="font-medium mono">${r.jobCode}</p></div>
-        <div><p class="text-xs text-slate-400 mb-0.5">日期</p><p class="font-medium">${r.date}</p></div>
-      </div>
-      <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
-          <span class="font-semibold text-sm">時間與薪酬</span>
-          <span class="badge badge-blue">時薪 HK$${r.hourlyRate}</span>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <div class="space-y-2">
-            <div class="flex justify-between"><span class="text-slate-500">開工時間：</span><span class="font-medium mono">${r.startTime}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">原收工時間：</span><span class="mono line-through text-slate-400">${r.endTime}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">更新收工時間：</span><span class="mono font-semibold ${isAdj ? 'text-amber-600' : 'text-emerald-600'}">${r.adjEnd}</span></div>
-          </div>
-          <div class="space-y-2">
-            <div class="flex justify-between"><span class="text-slate-500">午飯安排：</span><span>${r.includeMeal ? '包括午飯（不扣時）' : '扣除 ' + r.mealDeduct + ' 分鐘'}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">原始工時：</span><span class="mono">${r.rawHours.toFixed(2)} h</span></div>
-            <div class="flex justify-between font-semibold"><span class="text-slate-600">結算工時：</span><span class="mono text-indigo-600">${r.adjHours} h</span></div>
-          </div>
-        </div>
-        ${isAdj ? `<div class="mt-3 text-xs bg-amber-50 text-amber-800 rounded-lg px-3 py-2 flex gap-2 items-start"><svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>結束時間往前調整 ${r.diff} 分鐘，以符合 0.5 小時倍數計算規則。</div>` : ''}
-        <div class="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center">
-          <span class="font-semibold">總薪酬</span>
-          <span class="text-2xl font-bold text-emerald-600 mono">HK$ ${r.totalSalary.toFixed(1)}</span>
-        </div>
-      </div>
-      <div>
-        <h4 class="font-semibold text-sm mb-3">打卡照片</h4>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="border border-slate-100 rounded-xl p-3 bg-slate-50">
-            <p class="text-xs text-center text-slate-400 mb-2">開工打卡</p>
-            ${r.startPhoto ? `<img src="${r.startPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>` : `<div class="h-28 flex flex-col items-center justify-center text-slate-300"><svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
-          </div>
-          <div class="border border-slate-100 rounded-xl p-3 bg-slate-50">
-            <p class="text-xs text-center text-slate-400 mb-2">收工打卡</p>
-            ${r.endPhoto ? `<img src="${r.endPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>` : `<div class="h-28 flex flex-col items-center justify-center text-slate-300"><svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
-          </div>
-        </div>
-      </div>
-      <button onclick="deleteRecord('${r.id}')" class="w-full py-2 rounded-lg border-2 border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition">刪除此紀錄</button>
-    </div>
-  `;
-  document.getElementById('record-modal').classList.remove('hidden');
-}
+    // --- 出勤打卡與圖片上傳功能 ---
+    // 照片預覽邏輯
+    ['startPhoto', 'endPhoto'].forEach(id => {
+        document.getElementById(id).addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const img = document.getElementById(id + 'Preview');
+                img.src = URL.createObjectURL(file);
+                img.style.display = 'block';
+            }
+        });
+    });
 
-function renderRecords() {
-  const search = (document.getElementById('rec-search')?.value || '').toLowerCase();
-  const filtered = records.filter(r => {
-    const emp = getEmpById(r.empId);
-    return r.jobCode.toLowerCase().includes(search)
-      || r.date.includes(search)
-      || (emp && getEmpDisplay(emp).toLowerCase().includes(search));
-  });
-  const tbody = document.getElementById('rec-tbody');
-  const wrap = document.getElementById('rec-table-wrap');
-  const empty = document.getElementById('rec-empty');
-  document.getElementById('rec-count-title').textContent = `出勤紀錄 (${records.length})`;
-  if (filtered.length === 0) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-  wrap.classList.remove('hidden'); empty.classList.add('hidden');
-  tbody.innerHTML = filtered.map(r => {
-    const emp = getEmpById(r.empId);
-    const isAdj = r.diff > 0;
-    return `
-      <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 cursor-pointer" onclick="openRecordModal('${r.id}')">
-        <td class="p-3 text-xs text-slate-400">${r.date}</td>
-        <td class="p-3 font-medium text-sm">${emp ? emp.nickname : '已刪除'}</td>
-        <td class="p-3 mono text-xs text-indigo-600">${r.jobCode}</td>
-        <td class="p-3">
-          <div class="text-xs line-through text-slate-300 mono">${r.startTime} - ${r.endTime}</div>
-          <div class="text-sm font-medium mono flex items-center gap-1">${r.startTime} - <span class="${isAdj ? 'text-amber-600' : 'text-emerald-600'}">${r.adjEnd}</span>${isAdj ? `<span class="badge badge-orange ml-1">-${r.diff}m</span>` : ''}</div>
-        </td>
-        <td class="p-3 text-right mono text-sm font-semibold">${r.adjHours}h</td>
-        <td class="p-3 text-right mono text-sm font-semibold text-emerald-600">$${r.totalSalary.toFixed(1)}</td>
-        <td class="p-3 text-center"><button onclick="event.stopPropagation();deleteRecord('${r.id}')" class="btn-danger">刪除</button></td>
-      </tr>`;
-  }).join('');
-}
+    document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true; btn.innerText = "上傳圖片與資料中，請稍候...";
 
-// ---- PHOTOS ----
-function renderPhotos() {
-  const empFilter = document.getElementById('photo-filter-emp').value;
-  const from = document.getElementById('photo-filter-from').value;
-  const to = document.getElementById('photo-filter-to').value;
-  const filtered = records.filter(r => {
-    if (empFilter && r.empId !== empFilter) return false;
-    if (from && r.date < from) return false;
-    if (to && r.date > to) return false;
-    return true;
-  });
-  const grid = document.getElementById('photo-grid');
-  const empty = document.getElementById('photo-empty');
-  if (filtered.length === 0) { grid.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-  grid.classList.remove('hidden'); empty.classList.add('hidden');
-  grid.innerHTML = filtered.map(r => {
-    const emp = getEmpById(r.empId);
-    const isAdj = r.diff > 0;
-    return `
-      <div class="card overflow-hidden">
-        <div class="bg-gradient-to-r from-indigo-50 to-slate-50 px-4 py-3 border-b border-slate-100">
-          <div class="flex justify-between items-start">
-            <div>
-              <p class="font-bold text-indigo-600">${emp ? emp.nickname : '未知'}</p>
-              <p class="text-xs text-slate-400">${emp && (emp.zhName || emp.enName) ? [emp.zhName, emp.enName].filter(Boolean).join(' / ') : ''}</p>
-            </div>
-            <span class="badge badge-blue mono">${r.jobCode}</span>
-          </div>
-          <div class="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
-            <span>${r.date}</span>
-            <span>開工：<strong class="text-slate-700 mono">${r.startTime}</strong></span>
-            <span>收工：<strong class="${isAdj ? 'text-amber-600' : 'text-emerald-600'} mono">${r.adjEnd}</strong>${isAdj ? ` <span class="badge badge-orange">-${r.diff}m</span>` : ''}</span>
-            <span>工時：<strong class="text-indigo-600 mono">${r.adjHours}h</strong></span>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3 p-3">
-          <div>
-            <p class="text-xs text-center text-slate-400 mb-1.5 font-medium">開工打卡</p>
-            ${r.startPhoto
-              ? `<img src="${r.startPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>`
-              : `<div class="h-28 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-300"><svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
-          </div>
-          <div>
-            <p class="text-xs text-center text-slate-400 mb-1.5 font-medium">收工打卡</p>
-            ${r.endPhoto
-              ? `<img src="${r.endPhoto}" class="photo-preview-img" onclick="previewPhoto(this.src)"/>`
-              : `<div class="h-28 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-300"><svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="text-xs mt-1">無照片</span></div>`}
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-}
+        try {
+            const empId = document.getElementById('empSelect').value;
+            const emp = employees.find(e => e.empId === empId);
+            const date = document.getElementById('workDate').value;
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            const lunch = document.getElementById('includeLunch').checked;
 
-function exportPhotosPDF() {
-  const empFilter = document.getElementById('photo-filter-emp').value;
-  const from = document.getElementById('photo-filter-from').value;
-  const to = document.getElementById('photo-filter-to').value;
-  const filtered = records.filter(r => {
-    if (empFilter && r.empId !== empFilter) return false;
-    if (from && r.date < from) return false;
-    if (to && r.date > to) return false;
-    return true;
-  });
-  if (filtered.length === 0) { toast('沒有符合條件的紀錄', false); return; }
-  const empName = empFilter ? getEmpDisplay(getEmpById(empFilter)) : '所有員工';
-  const dateRange = (from || to) ? `${from || ''} ~ ${to || ''}` : '全部日期';
-  const cardsHTML = filtered.map(r => {
-    const emp = getEmpById(r.empId);
-    const isAdj = r.diff > 0;
-    const startImg = r.startPhoto ? `<img src="${r.startPhoto}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;"/>` : `<div style="width:100%;height:160px;background:#F8FAFC;border:2px dashed #CBD5E1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94A3B8;font-size:12px;">無照片</div>`;
-    const endImg = r.endPhoto ? `<img src="${r.endPhoto}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;"/>` : `<div style="width:100%;height:160px;background:#F8FAFC;border:2px dashed #CBD5E1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94A3B8;font-size:12px;">無照片</div>`;
-    return `
-      <div style="border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:20px;page-break-inside:avoid;">
-        <div style="background:linear-gradient(135deg,#EEF2FF,#F8FAFF);padding:14px 16px;border-bottom:1px solid #E2E8F0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div>
-              <div style="font-size:16px;font-weight:700;color:#4F46E5;">${emp ? emp.nickname : '未知'}</div>
-              ${emp && (emp.zhName || emp.enName) ? `<div style="font-size:12px;color:#94A3B8;">${[emp.zhName,emp.enName].filter(Boolean).join(' / ')}</div>` : ''}
-            </div>
-            <div style="background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;font-family:monospace;">${r.jobCode}</div>
-          </div>
-          <div style="display:flex;gap:20px;font-size:12px;color:#64748B;flex-wrap:wrap;">
-            <span>日期：<strong style="color:#1E293B;">${r.date}</strong></span>
-            <span>開工：<strong style="color:#1E293B;font-family:monospace;">${r.startTime}</strong></span>
-            <span>收工：<strong style="color:${isAdj ? '#D97706' : '#059669'};font-family:monospace;">${r.adjEnd}</strong>${isAdj ? ` <span style="background:#FFF7ED;color:#C2410C;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:600;">-${r.diff}m</span>` : ''}</span>
-            <span>結算工時：<strong style="color:#4F46E5;font-family:monospace;">${r.adjHours}h</strong></span>
-            <span>薪酬：<strong style="color:#059669;font-family:monospace;">HK$${r.totalSalary.toFixed(1)}</strong></span>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;">
-          <div>
-            <p style="text-align:center;font-size:11px;color:#94A3B8;margin-bottom:6px;font-weight:600;">開工打卡</p>
-            ${startImg}
-          </div>
-          <div>
-            <p style="text-align:center;font-size:11px;color:#94A3B8;margin-bottom:6px;font-weight:600;">收工打卡</p>
-            ${endImg}
-          </div>
-        </div>
-      </div>`;
-  }).join('');
+            const calc = calculateHours(start, end, lunch);
+            const totalPay = calc.hours * emp.wage;
 
-  const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"/><title>圖片打卡紀錄 PDF</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <style>*{font-family:'Noto Sans TC',sans-serif;margin:0;padding:0;box-sizing:border-box;}body{padding:24px;background:#fff;color:#1E293B;max-width:800px;margin:0 auto;}h1{font-size:20px;font-weight:700;color:#4F46E5;margin-bottom:4px;}p.sub{font-size:12px;color:#94A3B8;margin-bottom:20px;}@media print{body{padding:12px;}}</style>
-    </head><body>
-    <h1>圖片打卡紀錄報告</h1>
-    <p class="sub">員工：${empName} &nbsp;|&nbsp; 日期範圍：${dateRange} &nbsp;|&nbsp; 共 ${filtered.length} 筆紀錄</p>
-    ${cardsHTML}
-    <script>window.onload=function(){window.print();}<\/script>
-    </body></html>`);
-  w.document.close();
-}
+            // 上傳圖片到 Firebase Storage 並獲取網址
+            const startFile = document.getElementById('startPhoto').files[0];
+            const endFile = document.getElementById('endPhoto').files[0];
 
-// ---- EXPORT ----
-function getFilteredExport() {
-  const empFilter = document.getElementById('export-emp').value;
-  const from = document.getElementById('export-from').value;
-  const to = document.getElementById('export-to').value;
-  return records.filter(r => {
-    if (empFilter && r.empId !== empFilter) return false;
-    if (from && r.date < from) return false;
-    if (to && r.date > to) return false;
-    return true;
-  });
-}
+            // 命名規則：員工編號_日期_時間戳.jpg
+            const startRef = ref(storage, `attendance/${empId}_${date}_start_${Date.now()}`);
+            const endRef = ref(storage, `attendance/${empId}_${date}_end_${Date.now()}`);
 
-function renderExport() {
-  const filtered = getFilteredExport();
-  const tbody = document.getElementById('export-tbody');
-  const tfoot = document.getElementById('export-tfoot');
-  const wrap = document.getElementById('export-table-wrap');
-  const empty = document.getElementById('export-empty');
-  if (filtered.length === 0) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-  wrap.classList.remove('hidden'); empty.classList.add('hidden');
-  const totalHours = filtered.reduce((s, r) => s + r.adjHours, 0);
-  const totalPay = filtered.reduce((s, r) => s + r.totalSalary, 0);
-  tbody.innerHTML = filtered.map(r => {
-    const emp = getEmpById(r.empId);
-    const isAdj = r.diff > 0;
-    return `
-      <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-        <td class="p-3 text-xs text-slate-400">${r.date}</td>
-        <td class="p-3 font-semibold text-indigo-600">${emp ? emp.nickname : '-'}</td>
-        <td class="p-3 mono text-xs">${r.jobCode}</td>
-        <td class="p-3 mono text-sm">${r.startTime}</td>
-        <td class="p-3 mono text-sm line-through text-slate-400">${r.endTime}</td>
-        <td class="p-3 mono text-sm ${isAdj ? 'text-amber-600' : 'text-emerald-600'} font-semibold">${r.adjEnd}${isAdj ? ` <span class="badge badge-orange">-${r.diff}m</span>` : ''}</td>
-        <td class="p-3 text-xs">${r.includeMeal ? '包括午飯（不扣時）' : '扣除 ' + r.mealDeduct + ' 分鐘'}</td>
-        <td class="p-3 text-right mono font-semibold text-indigo-600">${r.adjHours}h</td>
-        <td class="p-3 text-right mono text-sm">$${r.hourlyRate}</td>
-        <td class="p-3 text-right mono font-bold text-emerald-600">$${r.totalSalary.toFixed(1)}</td>
-      </tr>`;
-  }).join('');
-  tfoot.innerHTML = `
-    <tr class="bg-slate-50 font-semibold border-t-2 border-slate-200">
-      <td colspan="7" class="p-3 text-right text-sm text-slate-600">合計（${filtered.length} 筆）</td>
-      <td class="p-3 text-right mono text-indigo-700">${totalHours}h</td>
-      <td class="p-3"></td>
-      <td class="p-3 text-right mono text-emerald-700 text-base">$${totalPay.toFixed(1)}</td>
-    </tr>`;
-}
+            await uploadBytes(startRef, startFile);
+            const startUrl = await getDownloadURL(startRef);
 
-function exportCSV() {
-  const filtered = getFilteredExport();
-  if (filtered.length === 0) { toast('沒有可匯出的紀錄', false); return; }
-  const header = ['日期','暱稱','工作編號','開工時間','原收工時間','更新收工時間','午飯安排','結算工時(h)','時薪(HKD)','總薪金(HKD)'];
-  const rows = filtered.map(r => {
-    const emp = getEmpById(r.empId);
-    return [r.date, emp ? emp.nickname : '-', r.jobCode, r.startTime, r.endTime, r.adjEnd,
-      r.includeMeal ? '包括午飯不扣時' : `扣除${r.mealDeduct}分鐘`, r.adjHours, r.hourlyRate, r.totalSalary.toFixed(1)];
-  });
-  const csv = '\uFEFF' + [header, ...rows].map(row => row.map(v => `"${v}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url;
-  a.download = `出勤報告_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  toast('CSV 匯出成功');
-}
+            await uploadBytes(endRef, endFile);
+            const endUrl = await getDownloadURL(endRef);
 
-function printReport() {
-  const filtered = getFilteredExport();
-  if (filtered.length === 0) { toast('沒有可列印的紀錄', false); return; }
-  const totalHours = filtered.reduce((s,r) => s + r.adjHours, 0);
-  const totalPay = filtered.reduce((s,r) => s + r.totalSalary, 0);
-  const rows = filtered.map(r => {
-    const emp = getEmpById(r.empId);
-    const isAdj = r.diff > 0;
-    return `<tr>
-      <td>${r.date}</td><td><strong>${emp ? emp.nickname : '-'}</strong></td><td>${r.jobCode}</td>
-      <td>${r.startTime}</td><td style="text-decoration:line-through;color:#94A3B8;">${r.endTime}</td>
-      <td style="color:${isAdj ? '#D97706' : '#059669'};font-weight:600;">${r.adjEnd}${isAdj ? ` (-${r.diff}m)` : ''}</td>
-      <td>${r.includeMeal ? '包括午飯' : '扣' + r.mealDeduct + '分'}</td>
-      <td style="text-align:right;font-weight:600;">${r.adjHours}h</td>
-      <td style="text-align:right;">$${r.hourlyRate}</td>
-      <td style="text-align:right;font-weight:700;color:#059669;">$${r.totalSalary.toFixed(1)}</td>
-    </tr>`;
-  }).join('');
-  const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"/><title>出勤報告</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <style>*{font-family:'Noto Sans TC',sans-serif;}body{padding:24px;max-width:1000px;margin:0 auto;}h1{font-size:20px;color:#4F46E5;margin-bottom:4px;}p.sub{font-size:12px;color:#94A3B8;margin-bottom:16px;}table{width:100%;border-collapse:collapse;font-size:12px;}th{background:#F8FAFC;padding:8px;border:1px solid #E2E8F0;font-weight:600;color:#64748B;}td{padding:8px;border:1px solid #E2E8F0;}tfoot td{background:#F1F5F9;font-weight:700;}@media print{body{padding:10px;}}</style>
-    </head><body>
-    <h1>出勤報告</h1>
-    <p class="sub">匯出時間：${new Date().toLocaleString('zh-HK')} &nbsp;|&nbsp; 共 ${filtered.length} 筆紀錄</p>
-    <table><thead><tr><th>日期</th><th>暱稱</th><th>工作編號</th><th>開工</th><th>原收工</th><th>更新收工</th><th>午飯</th><th>工時</th><th>時薪</th><th>薪金</th></tr></thead>
-    <tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="7" style="text-align:right;">合計</td><td style="text-align:right;">${totalHours}h</td><td></td><td style="text-align:right;color:#059669;">$${totalPay.toFixed(1)}</td></tr></tfoot>
-    </table>
-    <script>window.onload=function(){window.print();}<\/script>
-    </body></html>`);
-  w.document.close();
-}
+            // 儲存文字資料到 Firestore
+            const recordData = {
+                empId: emp.empId,
+                nickname: emp.nickname,
+                wage: emp.wage,
+                date: date,
+                startTime: start,
+                endTime: end,
+                adjustedEndTime: calc.adjustedEnd,
+                lunch: lunch,
+                hours: calc.hours,
+                totalPay: totalPay,
+                startPhotoUrl: startUrl,
+                endPhotoUrl: endUrl,
+                timestamp: Date.now()
+            };
 
-// ---- STATS ----
-function renderStats() {
-  document.getElementById('stat-total-records').textContent = records.length;
-  const totalHours = records.reduce((s,r) => s + r.adjHours, 0);
-  const totalPay = records.reduce((s,r) => s + r.totalSalary, 0);
-  document.getElementById('stat-total-hours').innerHTML = `${totalHours} <span class="text-sm font-normal text-slate-500">小時</span>`;
-  document.getElementById('stat-total-pay').textContent = `HK$${totalPay.toFixed(1)}`;
-  const tbody = document.getElementById('stats-tbody');
-  if (employees.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 text-sm">尚未新增員工</td></tr>'; return; }
-  tbody.innerHTML = employees.map(emp => {
-    const empRecs = records.filter(r => r.empId === emp.id);
-    const h = empRecs.reduce((s,r) => s + r.adjHours, 0);
-    const p = empRecs.reduce((s,r) => s + r.totalSalary, 0);
-    return `
-      <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
-        <td class="p-3 font-medium">${getEmpDisplay(emp)}</td>
-        <td class="p-3 text-center">${empRecs.length}</td>
-        <td class="p-3 text-right mono font-semibold text-indigo-600">${h} 小時</td>
-        <td class="p-3 text-right mono font-bold text-emerald-600">HK$${p.toFixed(1)}</td>
-      </tr>`;
-  }).join('');
-}
+            await addDoc(collection(db, "attendance"), recordData);
+            alert(`打卡成功！\n結算工時：${calc.hours} 小時\n總薪金：$${totalPay}`);
+            document.getElementById('attendanceForm').reset();
+            document.querySelectorAll('.photo-preview').forEach(img => img.style.display = 'none');
+            loadRecords();
+        } catch (error) {
+            console.error(error);
+            alert("上傳失敗，請檢查網路或 Firebase 權限設定！");
+        } finally {
+            btn.disabled = false; btn.innerText = "儲存紀錄並上傳圖片";
+        }
+    });
 
-// ---- INIT ----
-switchTab('attendance');
+    // --- 載入與渲染報表 / 圖片 PDF 區塊 ---
+    async function loadRecords() {
+        const q = query(collection(db, "attendance"), orderBy("timestamp", "desc"));
+        const querySnapshot = await getDocs(q);
+        records = [];
+        querySnapshot.forEach(doc => records.push(doc.data()));
+        renderReports();
+        renderPhotoCards();
+    }
+
+    function renderReports() {
+        const tbody = document.getElementById('reportTableBody');
+        tbody.innerHTML = '';
+        records.forEach(r => {
+            tbody.innerHTML += `<tr>
+                <td>${r.date}</td><td>${r.nickname}</td><td>${r.empId}</td>
+                <td>${r.startTime}</td><td>${r.endTime} ➔ <b class="text-danger">${r.adjustedEndTime}</b></td>
+                <td>${r.hours} 小時 ${r.lunch ? '(含午飯)' : ''}</td><td>$${r.totalPay}</td>
+            </tr>`;
+        });
+    }
+
+    function renderPhotoCards() {
+        const container = document.getElementById('photoRecordsContainer');
+        const printContainer = document.getElementById('printPhotoRecords');
+        let html = '';
+        
+        // 可依據篩選條件過濾
+        const filterEmp = document.getElementById('filterEmpPdf').value;
+        const filteredRecords = records.filter(r => filterEmp === 'ALL' || r.empId === filterEmp);
+
+        filteredRecords.forEach(r => {
+            html += `
+            <div class="col-md-6 mb-4">
+                <div class="card p-3">
+                    <h5 class="border-bottom pb-2">👤 ${r.nickname} (編號: ${r.empId}) | 📅 ${r.date}</h5>
+                    <p class="mb-1"><b>時間：</b> ${r.startTime} - ${r.adjustedEndTime} (工時: ${r.hours}h)</p>
+                    <p class="mb-2"><b>薪金：</b> $${r.totalPay}</p>
+                    <div class="row">
+                        <div class="col-6 text-center">
+                            <span class="badge bg-primary mb-1">開工打卡</span>
+                            <img src="${r.startPhotoUrl}" class="img-fluid rounded border" style="height: 150px; object-fit: cover;">
+                        </div>
+                        <div class="col-6 text-center">
+                            <span class="badge bg-danger mb-1">收工打卡</span>
+                            <img src="${r.endPhotoUrl}" class="img-fluid rounded border" style="height: 150px; object-fit: cover;">
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+        printContainer.innerHTML = html; // 同步到隱藏的列印區塊
+    }
+
+    // 監聽 PDF 篩選條件變動
+    document.getElementById('filterEmpPdf').addEventListener('change', renderPhotoCards);
+
+    // CSV 匯出功能掛載到全域
+    window.exportToCSV = () => {
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // 支援中文的 BOM
+        csvContent += "日期,暱稱,工作編號,原始上班,原始下班,更新後下班,包午飯(扣1hr),總工時,時薪,總薪金\n";
+        
+        records.forEach(r => {
+            let row = `${r.date},${r.nickname},${r.empId},${r.startTime},${r.endTime},${r.adjustedEndTime},${r.lunch?"是":"否"},${r.hours},${r.wage},${r.totalPay}`;
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `出勤紀錄報告_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // 初始化載入
+    window.onload = async () => {
+        // 設定今天的預設日期
+        document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+        await loadEmployees();
+        await loadRecords();
+    };
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
